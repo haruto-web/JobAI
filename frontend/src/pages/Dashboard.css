@@ -1,123 +1,59 @@
 /* Dashboard Container */
 .dashboard-container {
-  min-height: 100vh;
-  background: var(--bg-white);
-  padding-bottom: var(--space-3xl);
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Hero Section */
 .dashboard-hero {
-  position: relative;
-  min-height: 40vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: var(--gradient-hero);
-  padding: var(--space-3xl) var(--space-lg);
   text-align: center;
-}
-
-.dashboard-hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--gradient-hero);
-  opacity: 0.9;
-}
-
-.dashboard-hero::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-  animation: float 20s ease-in-out infinite;
+  margin-bottom: 60px;
+  padding: 40px;
+  background: var(--gradient-primary);
+  color: var(--text-light);
+  border-radius: 15px;
+  box-shadow: 0 4px 15px var(--shadow-dark);
 }
 
 .dashboard-hero h1 {
-  position: relative;
-  z-index: 2;
-  color: white;
-  margin-bottom: var(--space-lg);
-  font-size: 3rem;
+  font-size: 2.5rem;
+  margin-bottom: 15px;
   font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .dashboard-hero p {
-  position: relative;
-  z-index: 2;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1.25rem;
-  margin-bottom: var(--space-xl);
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 /* Dashboard Content */
 .dashboard-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--space-lg);
+  margin-bottom: 60px;
 }
 
 /* Collapsible Sections */
 .dashboard-section {
-  margin-bottom: var(--space-xl);
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-normal);
+  margin-bottom: 40px;
+  background: var(--bg-light);
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px var(--shadow-dark);
+  border: 2px solid var(--primary-blue);
 }
 
-.dashboard-section:hover {
-  box-shadow: var(--shadow-md);
-}
-
-.dashboard-section summary {
-  cursor: pointer;
-  padding: var(--space-lg);
-  background: var(--bg-white);
-  border-bottom: 1px solid var(--border-light);
-  transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.dashboard-section h2 {
+  color: var(--primary-blue);
+  margin-bottom: 15px;
+  font-size: 1.8rem;
   font-weight: 600;
+}
+
+.dashboard-section p {
+  line-height: 1.6;
   color: var(--text-dark);
-  font-size: 1.25rem;
-}
-
-.dashboard-section summary:hover {
-  background: var(--bg-gray);
-}
-
-.dashboard-section summary::marker {
-  display: none;
-}
-
-.dashboard-section summary::after {
-  content: '▼';
-  font-size: 1rem;
-  color: var(--text-light);
-  transition: transform var(--transition-fast);
-}
-
-.dashboard-section[open] summary::after {
-  transform: rotate(180deg);
-}
-
-.dashboard-section .section-content {
-  padding: var(--space-lg);
+  margin-bottom: 20px;
 }
 
 /* Form Styles */
@@ -188,7 +124,6 @@
 
 /* Card Styles */
 .application-card,
-.job-card,
 .project-card,
 .transaction-card,
 .working-job-card {
@@ -202,12 +137,25 @@
 }
 
 .application-card:hover,
-.job-card:hover,
 .project-card:hover,
 .transaction-card:hover,
 .working-job-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+
+.job-card {
+  background: var(--gradient-secondary);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px var(--shadow-dark);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid var(--primary-blue);
+}
+
+.job-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 15px var(--hover-shadow);
 }
 
 .application-card.enhanced {
@@ -470,16 +418,13 @@
 
 /* Footer */
 .footer {
+  margin-top: 80px;
+  padding: 40px;
+  background: var(--gradient-primary);
+  color: var(--text-dark);
   text-align: center;
-  padding: var(--space-xl) 0;
-  background: var(--bg-gray);
-  color: var(--text-light);
-  margin-top: var(--space-3xl);
-}
-
-.footer p {
-  margin: 0;
-  font-size: 0.875rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px var(--shadow-dark);
 }
 
 /* Analytics & Insights Styles */

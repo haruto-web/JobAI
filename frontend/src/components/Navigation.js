@@ -5,6 +5,7 @@ import './Navigation.css';
 
 function Navigation({ isLoggedIn, onLogin, onRegister, onLogout, userType }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false); // New state for admin dropdown
   const location = useLocation();
 
   const toggleMobileMenu = () => {
@@ -13,6 +14,11 @@ function Navigation({ isLoggedIn, onLogin, onRegister, onLogout, userType }) {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+    setIsAdminDropdownOpen(false); // Close dropdown when mobile menu closes
+  };
+
+  const toggleAdminDropdown = () => {
+    setIsAdminDropdownOpen(!isAdminDropdownOpen);
   };
 
   const isActive = (path) => {
@@ -69,20 +75,52 @@ function Navigation({ isLoggedIn, onLogin, onRegister, onLogout, userType }) {
           )}
 
           {isLoggedIn && userType === 'admin' && (
-            <>
-              <Link
-                to="/admin"
-                className={`nav-link ${isActive('/admin') ? 'active' : ''}`}
+            <div className="nav-dropdown">
+              <button
+                className={`nav-link dropdown-toggle ${isAdminDropdownOpen ? 'active' : ''}`}
+                onClick={toggleAdminDropdown}
               >
-                Admin Dashboard
-              </Link>
+                Dashboard
+              </button>
+              {isAdminDropdownOpen && (
+                <div className="dropdown-menu">
+                  <Link
+                    to="/dashboard"
+                    className="dropdown-item"
+                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                  >
+                    Dashboard Overview
+                  </Link>
+                  <Link
+                    to="/admin/analytics"
+                    className="dropdown-item"
+                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                  >
+                    📊 Analytics & Insights
+                  </Link>
+                  <Link
+                    to="/admin/create-job"
+                    className="dropdown-item"
+                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                  >
+                    Create New Job
+                  </Link>
+                  <Link
+                    to="/admin/job-postings"
+                    className="dropdown-item"
+                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                  >
+                    Your Job Postings
+                  </Link>
+                </div>
+              )}
               <Link 
                 to="/account" 
                 className={`nav-link ${isActive('/account') ? 'active' : ''}`}
               >
                 Account
               </Link>
-            </>
+            </div>
           )}
         </div>
 
@@ -170,13 +208,46 @@ function Navigation({ isLoggedIn, onLogin, onRegister, onLogout, userType }) {
 
           {isLoggedIn && userType === 'admin' && (
             <>
-              <Link
-                to="/admin"
-                className={`mobile-nav-link ${isActive('/admin') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
-              >
-                Admin Dashboard
-              </Link>
+              <div className="mobile-nav-dropdown">
+                <button
+                  className={`mobile-nav-link dropdown-toggle ${isAdminDropdownOpen ? 'active' : ''}`}
+                  onClick={toggleAdminDropdown}
+                >
+                  Dashboard
+                </button>
+                {isAdminDropdownOpen && (
+                  <div className="mobile-dropdown-menu">
+                    <Link
+                      to="/dashboard"
+                      className="mobile-dropdown-item"
+                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                    >
+                      Dashboard Overview
+                    </Link>
+                    <Link
+                      to="/admin/analytics"
+                      className="mobile-dropdown-item"
+                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                    >
+                      📊 Analytics & Insights
+                    </Link>
+                    <Link
+                      to="/admin/create-job"
+                      className="mobile-dropdown-item"
+                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                    >
+                      Create New Job
+                    </Link>
+                    <Link
+                      to="/admin/job-postings"
+                      className="mobile-dropdown-item"
+                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
+                    >
+                      Your Job Postings
+                    </Link>
+                  </div>
+                )}
+              </div>
               <Link 
                 to="/account" 
                 className={`mobile-nav-link ${isActive('/account') ? 'active' : ''}`}

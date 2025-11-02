@@ -31,6 +31,8 @@ function Dashboard() {
   // Resume upload for accepted jobs
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [editingJob, setEditingJob] = useState(null); // State to hold the job being edited
+  const [showEditModal, setShowEditModal] = useState(false); // State to control edit modal visibility
 
 
   const handleToggleUrgent = async (jobId, currentUrgent) => {
@@ -45,6 +47,55 @@ function Dashboard() {
       console.error('Failed to toggle urgent:', error);
       alert('Failed to update job. Please try again.');
     }
+  };
+
+  const handleDeleteJob = async (jobId) => {
+    if (!window.confirm('Are you sure you want to delete this job?')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/jobs/${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Job deleted successfully!');
+      fetchDashboard(); // Refresh dashboard data
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+      alert('Failed to delete job. Please try again.');
+    }
+  };
+
+  const handleEditJob = (job) => {
+    setEditingJob({ ...job, requirements: job.requirements || [] }); // Initialize requirements as array if null
+    setShowEditModal(true);
+  };
+
+  const handleUpdateJob = async (e) => {
+    e.preventDefault();
+    if (!editingJob) return;
+
+    setCreatingJob(true); // Re-using creatingJob state for loading
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/jobs/${editingJob.id}`, editingJob, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Job updated successfully!');
+      setShowEditModal(false);
+      setEditingJob(null);
+      fetchDashboard(); // Refresh dashboard data
+    } catch (error) {
+      console.error('Failed to update job:', error);
+      alert('Failed to update job. Please try again.');
+    } finally {
+      setCreatingJob(false);
+    }
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditingJob(prev => ({ ...prev, [name]: value }));
   };
 
   const fetchDashboard = async () => {
@@ -507,6 +558,18 @@ function Dashboard() {
                       >
                         {job.urgent ? 'Remove Urgent' : 'Mark as Urgent'}
                       </button>
+                      <button
+                        onClick={() => handleEditJob(job)}
+                        className="edit-job-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteJob(job.id)}
+                        className="delete-job-btn"
+                      >
+                        Delete
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -799,6 +862,105 @@ function Dashboard() {
         <p>&copy; {new Date().getFullYear()} AI-Powered Job Recommendation</p>
         <p>Helping you connect with the right opportunities</p>
       </footer>
+
+      {/* Edit Job Modal */}
+      {showEditModal && editingJob && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Job</h3>
+            <form onSubmit={handleUpdateJob} className="job-form">
+              <div className="form-group">
+                <label htmlFor="edit-title">Job Title</label>
+                <input
+                  type="text"
+                  id="edit-title"
+                  name="title"
+                  placeholder="Job Title"
+                  value={editingJob.title}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-description">Job Description</label>
+                <textarea
+                  id="edit-description"
+                  name="description"
+                  placeholder="Job Description"
+                  value={editingJob.description}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-company">Company</label>
+                <input
+                  type="text"
+                  id="edit-company"
+                  name="company"
+                  placeholder="Company"
+                  value={editingJob.company}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-location">Location</label>
+                <input
+                  type="text"
+                  id="edit-location"
+                  name="location"
+                  placeholder="Location"
+                  value={editingJob.location}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-type">Job Type</label>
+                <select id="edit-type" name="type" value={editingJob.type} onChange={handleEditFormChange}>
+                  <option value="full-time">Full-time</option>
+                  <option value="part-time">Part-time</option>
+                  <option value="contract">Contract</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-salary">Salary (optional)</label>
+                <input
+                  type="number"
+                  id="edit-salary"
+                  name="salary"
+                  placeholder="Salary (optional)"
+                  value={editingJob.salary}
+                  onChange={handleEditFormChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-urgent">Mark as Urgent</label>
+                <input
+                  type="checkbox"
+                  id="edit-urgent"
+                  name="urgent"
+                  checked={editingJob.urgent}
+                  onChange={(e) => setEditingJob(prev => ({ ...prev, urgent: e.target.checked }))}
+                />
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={creatingJob} className="submit-btn">
+                  {creatingJob ? 'Updating...' : 'Update Job'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       </div>
   );
 }

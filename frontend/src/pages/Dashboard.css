@@ -314,6 +314,38 @@
   opacity: 0.8;
 }
 
+.edit-job-btn {
+  background: var(--info);
+  color: white;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-left: var(--space-sm);
+}
+
+.edit-job-btn:hover {
+  background: var(--info);
+  opacity: 0.8;
+}
+
+.delete-job-btn {
+  background: var(--error);
+  color: white;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-left: var(--space-sm);
+}
+
+.delete-job-btn:hover {
+  background: var(--error);
+  opacity: 0.8;
+}
+
 /* Resume Upload */
 .resume-upload-section {
   margin-top: var(--space-lg);
@@ -368,8 +400,8 @@
   padding: var(--space-xl);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
+  max-width: 600px;
+  width: 100%;
   max-height: 90vh;
   overflow-y: auto;
 }

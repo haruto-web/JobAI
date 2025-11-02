@@ -128,12 +128,28 @@ class AiController extends Controller
 
             $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Common topics include: finding jobs by location/skill/type, applying for jobs, uploading resumes, cover letter tips, company details, interview preparation, application status, and career improvement. Be friendly, helpful, and professional. Use the provided context about the user when relevant. If asked about specific jobs, reference available job listings. Provide actionable advice and keep responses concise but informative. Always encourage next steps and offer to help further.";
 
+            // Fetch recent chat history
+            $chatHistory = ChatMessage::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(5) // Get last 5 messages for context
+                ->get()
+                ->reverse(); // Reverse to get chronological order
+
+            $messagesForOpenAI = [['role' => 'system', 'content' => $systemPrompt . ' ' . $context]];
+
+            foreach ($chatHistory as $chatMessage) {
+                $messagesForOpenAI[] = [
+                    'role' => $chatMessage->role,
+                    'content' => $chatMessage->message
+                ];
+            }
+
+            // Add the current user message
+            $messagesForOpenAI[] = ['role' => 'user', 'content' => $message];
+
             $response = $openai->getClient()->chat()->create([
                 'model' => 'gpt-3.5-turbo',
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt . ' ' . $context],
-                    ['role' => 'user', 'content' => $message]
-                ],
+                'messages' => $messagesForOpenAI,
                 'max_tokens' => 500,
             ]);
 

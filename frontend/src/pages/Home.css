@@ -296,9 +296,11 @@
 
 /* Footer */
 .footer {
+  padding: 40px;
   background: var(--text-dark);
   color: white;
   padding: 3rem 0 1rem;
+  border-radius: 15px;
 }
 
 .footer-content {

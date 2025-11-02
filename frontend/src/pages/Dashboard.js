@@ -26,14 +26,11 @@ function Dashboard() {
   const [moneyForm, setMoneyForm] = useState({ amount: '', description: '' });
   const [showMoneyForm, setShowMoneyForm] = useState(false);
   const [processingMoney, setProcessingMoney] = useState(false);
-  const [moneyAction, setMoneyAction] = useState(''); // 'add' or 'reduce'
-  // Resume management / AI analysis for jobseekers
+  const [moneyAction, setMoneyAction] = useState('');
+
+  // Resume upload for accepted jobs
   const [selectedFile, setSelectedFile] = useState(null);
-  const [replacingIndex, setReplacingIndex] = useState(null);
-  const [replacingFile, setReplacingFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
-  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
 
   const handleToggleUrgent = async (jobId, currentUrgent) => {
@@ -81,7 +78,11 @@ function Dashboard() {
       await axios.put(`${API_URL}/applications/${applicationId}`, { status }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert(`Application ${status} successfully!`);
+      if (status === 'rejected') {
+        alert('Application rejected and removed successfully!');
+      } else {
+        alert(`Application ${status} successfully!`);
+      }
       fetchDashboard(); // Refresh dashboard data
     } catch (error) {
       console.error('Failed to update application:', error);
@@ -172,104 +173,31 @@ function Dashboard() {
     }
   };
 
-  // Resume / AI handlers
-  const handleAddResume = async () => {
+  // Resume upload for accepted jobs
+  const handleUploadResumeForJob = async (projectId) => {
     if (!selectedFile) return;
     setUploadingResume(true);
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('resume', selectedFile);
-      formData.append('action', 'add');
+      formData.append('project_id', projectId);
 
-      const response = await axios.post(`${API_URL}/user/resume`, formData, {
+      await axios.post(`${API_URL}/user/upload-resume-for-job`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setDashboardData(prev => ({ ...prev, profile: response.data.profile }));
       setSelectedFile(null);
-      alert('Resume added successfully!');
+      alert('Resume uploaded successfully for the job!');
+      fetchDashboard(); // Refresh dashboard data
     } catch (error) {
-      console.error('Failed to add resume:', error);
-      alert('Failed to add resume. Please try again.');
+      console.error('Failed to upload resume for job:', error);
+      alert('Failed to upload resume for job. Please try again.');
     } finally {
       setUploadingResume(false);
     }
   };
 
-  const handleReplaceResume = async (index) => {
-    if (!replacingFile) return;
-    setUploadingResume(true);
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('action', 'replace');
-      formData.append('index', index);
-      formData.append('resume', replacingFile);
 
-      const response = await axios.post(`${API_URL}/user/resume`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setDashboardData(prev => ({ ...prev, profile: response.data.profile }));
-      setReplacingIndex(null);
-      setReplacingFile(null);
-      alert('Resume replaced successfully!');
-    } catch (error) {
-      console.error('Failed to replace resume:', error);
-      alert('Failed to replace resume. Please try again.');
-    } finally {
-      setUploadingResume(false);
-    }
-  };
-
-  const handleDeleteResume = async (index = null) => {
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('action', 'delete');
-      if (index !== null) formData.append('index', index);
-
-      const response = await axios.post(`${API_URL}/user/resume`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setDashboardData(prev => ({ ...prev, profile: response.data.profile }));
-      alert('Resume deleted successfully!');
-    } catch (error) {
-      console.error('Failed to delete resume:', error);
-      alert('Failed to delete resume. Please try again.');
-    }
-  };
-
-  const fetchAiAnalysis = async () => {
-    try {
-      setLoadingAnalysis(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/user/resume-analysis`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAiAnalysis(response.data);
-    } catch (error) {
-      console.error('Failed to fetch AI analysis:', error);
-      setAiAnalysis(null);
-    } finally {
-      setLoadingAnalysis(false);
-    }
-  };
-
-  const triggerAiAnalysis = async () => {
-    try {
-      setLoadingAnalysis(true);
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/user/trigger-ai-analysis`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setTimeout(() => fetchAiAnalysis(), 2000);
-    } catch (error) {
-      console.error('Failed to trigger AI analysis:', error);
-      alert('Failed to trigger AI analysis. Please try again.');
-    } finally {
-      setLoadingAnalysis(false);
-    }
-  };
 
   if (loading) {
     return <div>Loading dashboard...</div>;
@@ -290,78 +218,102 @@ function Dashboard() {
       <section className="dashboard-content">
         {dashboardData.user_type === 'jobseeker' ? (
           <div className="jobseeker-dashboard">
-            <div className="dashboard-section">
-              <h2>Job Seeker Dashboard</h2>
-              <p>Manage your job applications and track your progress</p>
-            </div>
+            <details className="dashboard-section" open>
+              <summary>Job Seeker Dashboard</summary>
+              <div className="section-content">
+                <p>Manage your job applications and track your progress</p>
+              </div>
+            </details>
 
-            <div className="dashboard-section">
-              <h2>Your Applications</h2>
-              {dashboardData.applications.length > 0 ? (
-                <div className="applications-list">
-                  {dashboardData.applications.map(app => (
-                    <div key={app.id} className="application-card">
-                      <h3>{app.job.title}</h3>
-                      <p>Company: {app.job.company}</p>
-                      <p>Location: {app.job.location}</p>
-                      <p>Status: <span className={`status-${app.status}`}>{app.status}</span></p>
-                      <p>Applied on: {new Date(app.created_at).toLocaleDateString()}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>You haven't applied to any jobs yet.</p>
-              )}
-            </div>
+            <details className="dashboard-section" open>
+              <summary>Your Applications</summary>
+              <div className="section-content">
+                {dashboardData.applications.length > 0 ? (
+                  <div className="applications-list">
+                    {dashboardData.applications.map(app => (
+                      <div key={app.id} className="application-card">
+                        <h3>{app.job.title}</h3>
+                        <p>Company: {app.job.company}</p>
+                        <p>Location: {app.job.location}</p>
+                        <p>Status: <span className={`status-${app.status}`}>{app.status}</span></p>
+                        <p>Applied on: {new Date(app.created_at).toLocaleDateString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>You haven't applied to any jobs yet.</p>
+                )}
+              </div>
+            </details>
 
             {dashboardData.profile && (
-              <div className="dashboard-section">
-                <h2>Your Profile</h2>
-                {dashboardData.profile.bio && <p><strong>Bio:</strong> {dashboardData.profile.bio}</p>}
-                {dashboardData.profile.skills && dashboardData.profile.skills.length > 0 && (
-                  <p><strong>Skills:</strong> {dashboardData.profile.skills.join(', ')}</p>
-                )}
-                {dashboardData.profile.experience_level && <p><strong>Experience Level:</strong> {dashboardData.profile.experience_level}</p>}
-              </div>
+              <details className="dashboard-section">
+                <summary>Your Profile</summary>
+                <div className="section-content">
+                  {dashboardData.profile.bio && <p><strong>Bio:</strong> {dashboardData.profile.bio}</p>}
+                  {dashboardData.profile.skills && dashboardData.profile.skills.length > 0 && (
+                    <p><strong>Skills:</strong> {dashboardData.profile.skills.join(', ')}</p>
+                  )}
+                  {dashboardData.profile.experience_level && <p><strong>Experience Level:</strong> {dashboardData.profile.experience_level}</p>}
+                </div>
+              </details>
             )}
 
-            <div className="dashboard-section">
-              <h2>Accepted Jobs (Working On)</h2>
-              {dashboardData.incoming_projects && dashboardData.incoming_projects.length > 0 ? (
-                <div className="projects-list">
-                  {dashboardData.incoming_projects.map(project => (
-                    <div key={project.id} className="project-card">
-                      <h3>{project.job.title}</h3>
-                      <p>Company: {project.job.company}</p>
-                      <p>Location: {project.job.location}</p>
-                      <p>Status: {project.status}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>No accepted jobs yet.</p>
-              )}
-            </div>
+            <details className="dashboard-section">
+              <summary>Accepted Jobs (Working On)</summary>
+              <div className="section-content">
+                {dashboardData.incoming_projects && dashboardData.incoming_projects.length > 0 ? (
+                  <div className="projects-list">
+                    {dashboardData.incoming_projects.map(project => (
+                      <div key={project.id} className="project-card">
+                        <h3>{project.job.title}</h3>
+                        <p>Company: {project.job.company}</p>
+                        <p>Location: {project.job.location}</p>
+                        <p>Status: {project.status}</p>
+                        <div className="resume-upload-section">
+                          <h4>Upload Resume for this Job</h4>
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            onChange={(e) => setSelectedFile(e.target.files[0])}
+                            disabled={uploadingResume}
+                          />
+                          <button
+                            onClick={() => handleUploadResumeForJob(project.id)}
+                            disabled={uploadingResume || !selectedFile}
+                            className="upload-resume-btn"
+                          >
+                            {uploadingResume ? 'Uploading...' : 'Upload Resume'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No accepted jobs yet.</p>
+                )}
+              </div>
+            </details>
 
-            <div className="dashboard-section">
-              <h2>Earnings & Transactions</h2>
-              <p>Total Earnings: ${dashboardData.total_earnings}</p>
-              {dashboardData.transactions.length > 0 ? (
-                <div className="transactions-list">
-                  {dashboardData.transactions.map(tx => (
-                    <div key={tx.id} className="transaction-card">
-                      <p>{tx.description}</p>
-                      <p>Amount: ${tx.amount} ({tx.type})</p>
-                      <p>Date: {tx.date}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>No transactions yet.</p>
-              )}
-            </div>
-
-
+            <details className="dashboard-section">
+              <summary>Earnings & Transactions</summary>
+              <div className="section-content">
+                <p>Total Earnings: ${dashboardData.total_earnings}</p>
+                {dashboardData.transactions.length > 0 ? (
+                  <div className="transactions-list">
+                    {dashboardData.transactions.map(tx => (
+                      <div key={tx.id} className="transaction-card">
+                        <p>{tx.description}</p>
+                        <p>Amount: ${tx.amount} ({tx.type})</p>
+                        <p>Date: {tx.date}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No transactions yet.</p>
+                )}
+              </div>
+            </details>
           </div>
         ) : (
           <div className="employer-dashboard">
@@ -369,6 +321,90 @@ function Dashboard() {
               <h2>Employer Dashboard</h2>
               <p>Manage your job postings and review applications</p>
             </div>
+
+            {/* Analytics & Insights Section */}
+            {dashboardData.analytics && (
+              <div className="dashboard-section">
+                <h2>📊 Analytics & Insights</h2>
+                <p>Get an overview of your hiring performance</p>
+
+                <div className="analytics-grid">
+                  <div className="analytics-card">
+                    <h3>Total Job Posts</h3>
+                    <div className="metric">{dashboardData.analytics.total_job_posts}</div>
+                  </div>
+
+                  <div className="analytics-card">
+                    <h3>Active Jobs</h3>
+                    <div className="metric">{dashboardData.analytics.active_jobs}</div>
+                    <small>Last 30 days</small>
+                  </div>
+
+                  <div className="analytics-card">
+                    <h3>Closed Jobs</h3>
+                    <div className="metric">{dashboardData.analytics.closed_jobs}</div>
+                    <small>Older than 30 days</small>
+                  </div>
+
+                  <div className="analytics-card">
+                    <h3>Total Applications</h3>
+                    <div className="metric">{dashboardData.total_applications}</div>
+                  </div>
+                </div>
+
+                {/* Applications per Job */}
+                {dashboardData.analytics.applications_per_job && dashboardData.analytics.applications_per_job.length > 0 && (
+                  <div className="analytics-subsection">
+                    <h3>Applications per Job</h3>
+                    <div className="applications-per-job">
+                      {dashboardData.analytics.applications_per_job.map((job, index) => (
+                        <div key={index} className="job-app-item">
+                          <span className="job-title">{job.job_title}</span>
+                          <span className="app-count">{job.applications_count} applications</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Application Trends Chart */}
+                {dashboardData.analytics.application_trends && dashboardData.analytics.application_trends.length > 0 && (
+                  <div className="analytics-subsection">
+                    <h3>Application Trends (Last 7 Days)</h3>
+                    <div className="trends-chart">
+                      {dashboardData.analytics.application_trends.map((trend, index) => (
+                        <div key={index} className="trend-bar">
+                          <div className="trend-date">{new Date(trend.date).toLocaleDateString()}</div>
+                          <div className="trend-bar-fill" style={{ height: `${Math.max(trend.applications * 20, 10)}px` }}>
+                            <span className="trend-count">{trend.applications}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Activity Feed */}
+                {dashboardData.analytics.recent_activities && dashboardData.analytics.recent_activities.length > 0 && (
+                  <div className="analytics-subsection">
+                    <h3>Recent Activity Feed</h3>
+                    <div className="activity-feed">
+                      {dashboardData.analytics.recent_activities.map((activity, index) => (
+                        <div key={index} className="activity-item">
+                          <div className="activity-icon">
+                            {activity.type === 'application' ? '📝' : '💰'}
+                          </div>
+                          <div className="activity-content">
+                            <p>{activity.message}</p>
+                            <small>{new Date(activity.date).toLocaleString()}</small>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="dashboard-section">
               <h2>Create New Job</h2>
@@ -661,56 +697,7 @@ function Dashboard() {
         )}
       </section>
 
-      {/* Resume management & AI analysis for jobseekers - outside grid */}
-      {dashboardData.user_type === 'jobseeker' && (
-        <div className="dashboard-section-resumes-section">
-          <h2>Manage Your Resumes</h2>
-          <p>Upload and manage multiple resumes to improve job matches and get AI insights.</p>
 
-          <div style={{ marginTop: '10px' }}>
-            <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setSelectedFile(e.target.files[0])} />
-            <button onClick={handleAddResume} disabled={!selectedFile || uploadingResume} className="upload-btn" style={{ marginLeft: '8px' }}>
-              {uploadingResume ? 'Adding...' : 'Add Resume'}
-            </button>
-          </div>
-
-          {dashboardData.profile && dashboardData.profile.resumes && dashboardData.profile.resumes.length > 0 && (
-            <div style={{ marginTop: '15px' }}>
-              <h3>Your Resumes</h3>
-              {dashboardData.profile.resumes.map((resume, index) => (
-                <div key={index} style={{ marginBottom: '10px', padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }}>
-                  <span>{resume.name}</span>
-                  <div style={{ marginTop: '5px' }}>
-                    <a href={`${API_URL}/storage/${resume.url}`} target="_blank" rel="noopener noreferrer">View</a>
-                    {replacingIndex === index ? (
-                      <div>
-                        <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setReplacingFile(e.target.files[0])} />
-                        <button onClick={() => handleReplaceResume(index)} disabled={!replacingFile || uploadingResume}>{uploadingResume ? 'Changing...' : 'Change Resume'}</button>
-                        <button onClick={() => setReplacingIndex(null)}>Cancel</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setReplacingIndex(index)} style={{ marginLeft: '8px' }}>Change Resume</button>
-                    )}
-                    <button onClick={() => handleDeleteResume(index)} className="delete-btn" style={{ marginLeft: '8px' }}>Delete</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {dashboardData.profile && dashboardData.profile.resume_url && (!dashboardData.profile.resumes || dashboardData.profile.resumes.length === 0) && (
-            <div style={{ marginTop: '10px' }}>
-              <p>Current Resume: <a href={`${API_URL}/storage/${dashboardData.profile.resume_url}`} target="_blank" rel="noopener noreferrer">View Resume</a></p>
-              <button onClick={() => handleDeleteResume()} className="delete-btn">Delete Resume</button>
-            </div>
-          )}
-
-          {/* AI Analysis */}
-          <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #007bff', borderRadius: '8px', backgroundColor: '#f8f9fa' }}>
-            <p style={{ marginTop: '8px' }}>Open the chat in the bottom-right to talk to the AI career advisor.</p>
-          </div>
-        </div>
-      )}
 
       {/* Payout Modal */}
       {showPayoutForm && (

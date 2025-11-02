@@ -8,7 +8,6 @@ function ChatBot({ isOpen, onToggle }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [skills, setSkills] = useState('');
-  const [resumeFile, setResumeFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -120,36 +119,7 @@ function ChatBot({ isOpen, onToggle }) {
     }
   };
 
-  const handleResumeUpload = async () => {
-    if (!resumeFile || loading) return;
 
-    setMessages(prev => [...prev, { role: 'user', text: `Uploaded resume: ${resumeFile.name}` }]);
-    setLoading(true);
-
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('resume', resumeFile);
-
-      const response = await axios.post(`${API_URL}/ai/chat-resume`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      setMessages(prev => [...prev, { role: 'bot', text: response.data.response }]);
-      setResumeFile(null);
-    } catch (error) {
-      console.error('Resume upload error:', error);
-      setMessages(prev => [...prev, {
-        role: 'bot',
-        text: 'Sorry, I couldn\'t analyze your resume right now. Please try again later.'
-      }]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -229,25 +199,7 @@ function ChatBot({ isOpen, onToggle }) {
           </button>
         </div>
 
-        <div className="chatbot-resume">
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx"
-            onChange={(e) => setResumeFile(e.target.files[0])}
-            disabled={loading}
-            id="resume-upload"
-          />
-          <label htmlFor="resume-upload" className="file-label">
-            {resumeFile ? resumeFile.name : 'Choose resume file'}
-          </label>
-          <button
-            onClick={handleResumeUpload}
-            disabled={!resumeFile || loading}
-            className="upload-button"
-          >
-            Analyze Resume
-          </button>
-        </div>
+
       </div>
     </div>
   );

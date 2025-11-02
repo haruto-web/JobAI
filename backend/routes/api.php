@@ -31,9 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('user', [AuthController::class, 'updateUser']);
     Route::put('user/profile', [AuthController::class, 'updateProfile']);
     Route::post('user/profile-image', [AuthController::class, 'uploadProfileImage']);
-    Route::post('user/resume', [AuthController::class, 'uploadResume']);
-    Route::get('user/resume-analysis', [AuthController::class, 'getResumeAnalysis']);
-    Route::post('user/trigger-ai-analysis', [AuthController::class, 'triggerAiAnalysis']);
+    Route::post('user/upload-resume-for-job', [UserController::class, 'uploadResumeForJob']);
     Route::get('user/notifications', [AuthController::class, 'getNotifications']);
     Route::put('user/notifications/{id}/read', [AuthController::class, 'markNotificationAsRead']);
     Route::put('user/notifications/read-all', [AuthController::class, 'markAllNotificationsAsRead']);
@@ -56,8 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // AI conversational chat
     Route::post('ai/chat', [\App\Http\Controllers\Api\AiController::class, 'chat']);
 
-    // AI resume analysis in chat
-    Route::post('ai/chat-resume', [\App\Http\Controllers\Api\AiController::class, 'chatResume']);
+
 
     // Get chat history
     Route::get('ai/chat-history', [\App\Http\Controllers\Api\AiController::class, 'getChatHistory']);

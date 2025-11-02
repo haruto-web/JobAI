@@ -34,6 +34,7 @@ class ApplicationController extends Controller
         $validated = $request->validate([
             'job_id' => 'required|exists:job_listings,id',
             'cover_letter' => 'nullable|string|max:1000',
+            'resume' => 'nullable|file|mimes:pdf,doc,docx|max:5120', // 5MB max
         ]);
 
         $user = Auth::user();
@@ -58,6 +59,14 @@ class ApplicationController extends Controller
             'status' => 'pending',
             'cover_letter' => $validated['cover_letter'] ?? null,
         ]);
+
+        // Store the resume file if provided
+        if ($request->hasFile('resume')) {
+            $file = $request->file('resume');
+            $filename = time() . '_' . $user->id . '_' . $application->id . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('resumes', $filename, 'public');
+            $application->update(['resume_path' => $path]);
+        }
 
         // Load the job and its owner
         $application->load(['job', 'user']);
@@ -107,7 +116,48 @@ class ApplicationController extends Controller
             'status' => 'required|in:pending,accepted,rejected',
         ]);
 
+        $oldStatus = $application->status;
         $application->update($validated);
+
+        // Send notification to jobseeker when application is accepted
+        if ($validated['status'] === 'accepted' && $oldStatus !== 'accepted') {
+            Notification::create([
+                'user_id' => $application->user_id,
+                'type' => 'application_accepted',
+                'title' => '🎉 Application Accepted!',
+                'message' => 'Congratulations! Your application for "' . $application->job->title . '" has been accepted. You can now upload your resume.',
+                'data' => [
+                    'application_id' => $application->id,
+                    'job_id' => $application->job->id,
+                    'job_title' => $application->job->title,
+                    'employer_name' => $user->name
+                ]
+            ]);
+        }
+
+        // Send notification to jobseeker and delete application when rejected
+        if ($validated['status'] === 'rejected') {
+            // Send notification to jobseeker (only if this is a new rejection)
+            if ($oldStatus !== 'rejected') {
+                Notification::create([
+                    'user_id' => $application->user_id,
+                    'type' => 'application_rejected',
+                    'title' => '❌ Application Rejected',
+                    'message' => 'Unfortunately, your application for "' . $application->job->title . '" has been rejected.',
+                    'data' => [
+                        'application_id' => $application->id,
+                        'job_id' => $application->job->id,
+                        'job_title' => $application->job->title,
+                        'employer_name' => $user->name
+                    ]
+                ]);
+            }
+
+            // Delete the rejected application
+            $application->delete();
+
+            return response()->json(['message' => 'Application rejected and removed']);
+        }
 
         return response()->json($application->load(['user', 'job']));
     }

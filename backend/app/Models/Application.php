@@ -14,6 +14,7 @@ class Application extends Model
         'job_id',
         'status',
         'cover_letter',
+        'resume_path',
     ];
 
     protected $casts = [

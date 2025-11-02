@@ -59,20 +59,24 @@ function Jobs() {
   }, []);
 
   const handleApply = async (jobId) => {
-    // Check if user has a resume before applying
-    const hasResume = user && user.profile && (user.profile.resumes?.length > 0 || user.profile.resume_url);
-    if (!hasResume) {
-      alert('Please upload a resume before applying for jobs.');
+    // Check if resume is selected
+    if (!selectedFile) {
+      alert('Please select a resume file before applying for jobs.');
       return;
     }
 
     setApplying(jobId);
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/applications`, { job_id: jobId }, {
+      const formData = new FormData();
+      formData.append('job_id', jobId);
+      formData.append('resume', selectedFile);
+
+      await axios.post(`${API_URL}/applications`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Application submitted successfully!');
+      setSelectedFile(null);
+      alert('Application submitted successfully with your resume!');
     } catch (error) {
       console.error('Failed to apply:', error);
       if (error.response && error.response.status === 409) {
@@ -288,13 +292,21 @@ function Jobs() {
                 {job.salary && <p>Salary: ${job.salary}</p>}
                 {job.description && <p>{job.description}</p>}
                 {user && user.user_type === 'jobseeker' && (
-                  <button
-                    onClick={() => handleApply(job.id)}
-                    disabled={applying === job.id}
-                    className="apply-btn"
-                  >
-                    {applying === job.id ? 'Applying...' : 'Apply'}
-                  </button>
+                  <div style={{ marginTop: '10px' }}>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setSelectedFile(e.target.files[0])}
+                      style={{ marginBottom: '5px', width: '100%' }}
+                    />
+                    <button
+                      onClick={() => handleApply(job.id)}
+                      disabled={applying === job.id || !selectedFile}
+                      className="apply-btn"
+                    >
+                      {applying === job.id ? 'Applying...' : 'Apply with Resume'}
+                    </button>
+                  </div>
                 )}
               </div>
             )) : (
@@ -317,13 +329,21 @@ function Jobs() {
                     {job.match_score !== undefined && (
                       <span className="match-score">{job.match_score}% match</span>
                     )}
-                    <button
-                      onClick={() => handleApply(job.id)}
-                      disabled={applying === job.id}
-                      className="apply-btn"
-                    >
-                      {applying === job.id ? 'Applying...' : 'Apply'}
-                    </button>
+                    <div style={{ marginTop: '10px' }}>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => setSelectedFile(e.target.files[0])}
+                        style={{ marginBottom: '5px', width: '100%' }}
+                      />
+                      <button
+                        onClick={() => handleApply(job.id)}
+                        disabled={applying === job.id || !selectedFile}
+                        className="apply-btn"
+                      >
+                        {applying === job.id ? 'Applying...' : 'Apply with Resume'}
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (

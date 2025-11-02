@@ -252,23 +252,7 @@ function Account({ isLoggedIn }) {
                           <p><strong>Skills:</strong> {user.profile.skills.join(', ')}</p>
                         )}
                         {user.profile.education_attainment && <p><strong>Education Attainment:</strong> {user.profile.education_attainment}</p>}
-                        <div>
-                          <strong>Resumes:</strong>
-                          {user.profile.resumes && user.profile.resumes.length > 0 ? (
-                            <div style={{ marginTop: '15px' }}>
-                              {user.profile.resumes.map((resume, index) => (
-                                <div key={index} style={{ marginBottom: '10px', padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }}>
-                                  <span>{resume.name}</span>
-                                  <div style={{ marginTop: '5px' }}>
-                                    <a href={`${API_URL}/storage/${resume.url}`} target="_blank" rel="noopener noreferrer">View</a>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p>No resumes uploaded yet. Go to the <a href="/jobs">Jobs</a> page to manage your resumes.</p>
-                          )}
-                        </div>
+
 
 
                       </div>

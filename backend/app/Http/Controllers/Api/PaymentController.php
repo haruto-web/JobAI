@@ -59,6 +59,22 @@ class PaymentController extends Controller
             'processed_at' => now(),
         ]);
 
+        // Send notification to jobseeker about salary payment
+        \App\Models\Notification::create([
+            'user_id' => $application->user_id,
+            'type' => 'salary_paid',
+            'title' => '💰 Salary Payment Received!',
+            'message' => 'You have received a salary payment of $' . number_format($validated['amount'], 2) . ' for "' . $application->job->title . '".',
+            'data' => [
+                'application_id' => $application->id,
+                'job_id' => $application->job->id,
+                'job_title' => $application->job->title,
+                'employer_name' => $user->name,
+                'amount' => $validated['amount'],
+                'payment_id' => $payment->id
+            ]
+        ]);
+
         return response()->json([
             'message' => 'Payment processed successfully',
             'payment' => $payment->load(['application.job', 'employer', 'jobseeker'])

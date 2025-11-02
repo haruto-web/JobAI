@@ -54,7 +54,7 @@ class DashboardController extends Controller
                     'amount' => $payment->amount,
                     'type' => 'earned',
                     'description' => $payment->description,
-                    'date' => $payment->processed_at->format('Y-m-d'),
+                    'date' => $payment->processed_at ? $payment->processed_at->format('Y-m-d') : null,
                 ];
             });
 
@@ -104,13 +104,87 @@ class DashboardController extends Controller
                     'amount' => $amount,
                     'type' => $type,
                     'description' => $payment->description,
-                    'date' => $payment->processed_at->format('Y-m-d'),
+                    'date' => $payment->processed_at ? $payment->processed_at->format('Y-m-d') : null,
                 ];
             });
 
         // Compute employer balance by summing signed transaction amounts.
         // 'added' -> positive, 'reduced'/'paid' -> negative as set above.
         $totalSpent = (float) $transactions->sum('amount');
+
+        // Analytics & Insights
+        $totalJobPosts = $jobs->count();
+        $activeJobs = $jobs->where('created_at', '>=', now()->subDays(30))->count(); // Jobs posted in last 30 days
+        $closedJobs = $jobs->where('created_at', '<', now()->subDays(30))->count(); // Older jobs considered "closed"
+
+        // Applications per job
+        $applicationsPerJob = $jobs->map(function ($job) {
+            return [
+                'job_title' => $job->title,
+                'applications_count' => $job->applications->count(),
+            ];
+        });
+
+        // Application trends (last 7 days)
+        $applicationTrends = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $count = Application::whereHas('job', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->whereDate('created_at', $date)->count();
+
+            $applicationTrends[] = [
+                'date' => $date,
+                'applications' => $count,
+            ];
+        }
+
+        // Recent activity feed
+        $recentActivities = [];
+
+        // Recent applications
+        $recentApplications = Application::whereHas('job', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->with(['user', 'job'])
+        ->orderBy('created_at', 'desc')
+        ->limit(5)
+        ->get()
+        ->map(function ($app) {
+            return [
+                'type' => 'application',
+                'message' => "New application from {$app->user->name} for '{$app->job->title}'",
+                'date' => $app->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+
+        // Recent payments
+        $recentPayments = Payment::where('employer_id', $user->id)
+            ->with(['application.job', 'jobseeker'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($payment) {
+                $message = '';
+                if ($payment->type === 'money_added') {
+                    $message = "Money added: \${$payment->amount}";
+                } elseif ($payment->type === 'money_reduced') {
+                    $message = "Money reduced: \${$payment->amount}";
+                } else {
+                    $message = "Payment of \${$payment->amount} made to {$payment->jobseeker->name}";
+                }
+                return [
+                    'type' => 'payment',
+                    'message' => $message,
+                    'date' => $payment->processed_at ? $payment->processed_at->format('Y-m-d H:i:s') : null,
+                ];
+            });
+
+        // Combine and sort recent activities
+        $recentActivities = collect(array_merge($recentApplications->toArray(), $recentPayments->toArray()))
+            ->sortByDesc('date')
+            ->take(10)
+            ->values()
+            ->all();
 
         return response()->json([
             'user_type' => 'employer',
@@ -121,6 +195,15 @@ class DashboardController extends Controller
             'total_spent' => $totalSpent,
             'active_jobs' => $jobs->count(),
             'total_applications' => $applications->count(),
+            // Analytics data
+            'analytics' => [
+                'total_job_posts' => $totalJobPosts,
+                'active_jobs' => $activeJobs,
+                'closed_jobs' => $closedJobs,
+                'applications_per_job' => $applicationsPerJob,
+                'application_trends' => $applicationTrends,
+                'recent_activities' => $recentActivities,
+            ],
         ]);
     }
 

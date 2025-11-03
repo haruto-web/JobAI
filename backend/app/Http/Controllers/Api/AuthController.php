@@ -3,83 +3,91 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\UserProfile;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use App\Services\ResumeParserService;
-use App\Services\OpenAIService;
-use App\Models\Notification;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Facades\Socialite;
-
-
+use Illuminate\Support\Facades\Password;
+use App\Services\OpenAIService;
+use App\Services\ResumeParserService;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    /**
+     * Send password reset email
+     */
+    public function sendPasswordReset(Request $request)
     {
-        try {
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|string|min:8|confirmed',
-                'user_type' => 'required|in:jobseeker,employer',
-            ], [
-                'email.unique' => 'This email is already registered. Please use a different email or try logging in.',
-            ]);
+        $request->validate([
+            'email' => 'required|email',
+        ]);
 
-            Log::info('Validation passed for registration');
+        $user = User::where('email', $request->email)->first();
 
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'user_type' => $request->user_type,
-            ]);
-
-            // Send email verification
-            $user->sendEmailVerificationNotification();
-
-            return response()->json([
-                'message' => 'Registration successful! Please check your email and click the verification link to activate your account.',
-                'user' => $user->makeHidden(['email_verified_at']),
-            ], 201);
-        } catch (\Exception $e) {
-            throw $e;
+        if (!$user) {
+            return response()->json(['message' => 'If an account with that email exists, a password reset link has been sent.'], 200);
         }
+
+        $token = Password::createToken($user);
+
+        $user->sendPasswordResetNotification($token);
+
+        return response()->json(['message' => 'Password reset link sent! Please check your email.'], 200);
     }
 
+    /**
+     * Reset password
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Password reset successfully! You can now log in with your new password.'], 200);
+        }
+
+        return response()->json(['message' => 'Invalid token or email.'], 400);
+    }
+
+    /**
+     * Login user
+     */
     public function login(Request $request)
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required',
+            'password' => 'required|string',
         ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
-
-        if (! $user instanceof User) {
-            return response()->json(['error' => 'Authentication failed'], 401);
-        }
-
-        // Check if email is verified
         if (!$user->hasVerifiedEmail()) {
             return response()->json([
-                'error' => 'Email not verified',
-                'message' => 'Please verify your email address before logging in. Check your email for the verification link.',
+                'message' => 'Please verify your email address before logging in.',
                 'needs_verification' => true
             ], 403);
         }
@@ -141,7 +149,7 @@ class AuthController extends Controller
         return response()->json($request->user()->load('profile'));
     }
 
-  public function updateProfile(Request $request)
+    public function updateProfile(Request $request)
     {
         $request->validate([
             'bio' => 'nullable|string|max:1000',
@@ -165,7 +173,8 @@ class AuthController extends Controller
 
         return response()->json($user->load('profile'));
     }
-     private function extractAndMergeSkills($path, $profile)
+
+    private function extractAndMergeSkills($path, $profile)
     {
         try {
             // Try to instantiate parser safely (avoid autoload fatal)
@@ -301,7 +310,8 @@ class AuthController extends Controller
             Log::error('performComprehensiveResumeAnalysis exception', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
         }
     }
-     public function uploadResume(Request $request)
+
+    public function uploadResume(Request $request)
     {
         Log::info('uploadResume called', [
             'user_id' => $request->user()?->id,
@@ -506,8 +516,6 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'All notifications marked as read']);
     }
-
-
 
     /**
      * Verify user email

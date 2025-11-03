@@ -27,8 +27,9 @@ function Login({ onLogin }) {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = 'http://localhost:8000/auth/google';
   };
+
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();

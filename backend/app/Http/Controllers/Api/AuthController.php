@@ -16,6 +16,7 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Laravel\Socialite\Facades\Socialite;
 
 
 
@@ -42,12 +43,12 @@ class AuthController extends Controller
                 'user_type' => $request->user_type,
             ]);
 
-            /** @var \App\Models\User $user */
-            $token = $user->createToken('API Token')->plainTextToken;
+            // Send email verification
+            $user->sendEmailVerificationNotification();
 
             return response()->json([
-                'user' => $user,
-                'token' => $token,
+                'message' => 'Registration successful! Please check your email and click the verification link to activate your account.',
+                'user' => $user->makeHidden(['email_verified_at']),
             ], 201);
         } catch (\Exception $e) {
             throw $e;
@@ -72,6 +73,15 @@ class AuthController extends Controller
 
         if (! $user instanceof User) {
             return response()->json(['error' => 'Authentication failed'], 401);
+        }
+
+        // Check if email is verified
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'error' => 'Email not verified',
+                'message' => 'Please verify your email address before logging in. Check your email for the verification link.',
+                'needs_verification' => true
+            ], 403);
         }
 
         // Create token
@@ -498,6 +508,114 @@ class AuthController extends Controller
     }
 
 
+
+    /**
+     * Verify user email
+     */
+    public function verifyEmail(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|string',
+            'hash' => 'required|string',
+        ]);
+
+        $user = User::find($request->id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified'], 200);
+        }
+
+        if (!hash_equals((string) $request->id, (string) $user->getKey())) {
+            return response()->json(['message' => 'Invalid verification link'], 400);
+        }
+
+        if (!hash_equals($request->hash, sha1($user->getEmailForVerification()))) {
+            return response()->json(['message' => 'Invalid verification link'], 400);
+        }
+
+        $user->markEmailAsVerified();
+
+        return response()->json(['message' => 'Email verified successfully! You can now log in.'], 200);
+    }
+
+    /**
+     * Resend email verification
+     */
+    public function resendVerificationEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified'], 200);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return response()->json(['message' => 'Verification email sent! Please check your email.'], 200);
+    }
+
+    /**
+     * Redirect to Google OAuth
+     */
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    /**
+     * Handle Google OAuth callback
+     */
+    public function handleGoogleCallback(Request $request)
+    {
+        try {
+            $googleUser = Socialite::driver('google')->user();
+
+            // Check if user already exists
+            $user = User::where('email', $googleUser->getEmail())->first();
+
+            if ($user) {
+                // User exists, log them in
+                if (!$user->hasVerifiedEmail()) {
+                    $user->markEmailAsVerified();
+                }
+            } else {
+                // Create new user
+                $user = User::create([
+                    'name' => $googleUser->getName(),
+                    'email' => $googleUser->getEmail(),
+                    'password' => Hash::make(Str::random(24)), // Random password since OAuth
+                    'user_type' => 'jobseeker', // Default to jobseeker
+                    'email_verified_at' => now(), // Google emails are verified
+                ]);
+            }
+
+            // Create token
+            $token = $user->createToken('API Token')->plainTextToken;
+
+            // Return user data with token
+            return response()->json([
+                'user' => $user->makeHidden(['password', 'remember_token']),
+                'token' => $token,
+                'message' => 'Successfully authenticated with Google!'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Google OAuth error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Authentication failed'], 500);
+        }
+    }
 
     /**
      * Ensure the given user has a profile record and return it.

@@ -5,13 +5,149 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\OpenAIService;
+use App\Services\ResumeParserService;
 use App\Models\Job;
 use App\Models\ChatMessage;
+use App\Models\UserProfile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 class AiController extends Controller
 {
+    public function resumeChat(Request $request)
+    {
+        $request->validate([
+            'resume' => 'required|file|mimes:pdf,doc,docx|max:5120', // 5MB max
+        ]);
+
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        try {
+            $file = $request->file('resume');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('resumes', $fileName, 'public');
+
+            // Parse resume text
+            $parser = new ResumeParserService();
+            $resumeText = $parser->parseResume(storage_path('app/public/' . $filePath));
+
+            // Analyze resume with OpenAI
+            $openai = new OpenAIService();
+            $analysis = $openai->analyzeResumeComprehensively($resumeText);
+
+            // Update user profile with analysis
+            $profile = $user->profile ?? new UserProfile(['user_id' => $user->id]);
+            $profile->fill([
+                'skills' => $analysis['skills'] ?? [],
+                'experience_level' => $analysis['experience_level'] ?? 'entry',
+                'education_attainment' => $this->mapEducationLevel($analysis['education'] ?? []),
+                'extracted_experience' => $analysis['experience_years'] ?? '',
+                'extracted_education' => json_encode($analysis['education'] ?? []),
+                'extracted_certifications' => json_encode($analysis['certifications'] ?? []),
+                'extracted_languages' => json_encode($analysis['languages'] ?? []),
+                'resume_summary' => $analysis['summary'] ?? '',
+                'ai_analysis' => $analysis,
+                'last_ai_analysis' => now(),
+            ]);
+
+            // Store resume info
+            $resumes = $profile->resumes ?? [];
+            $resumes[] = [
+                'name' => $file->getClientOriginalName(),
+                'url' => $filePath,
+                'uploaded_at' => now()->toISOString(),
+            ];
+            $profile->resumes = $resumes;
+
+            $profile->save();
+
+            // Generate job suggestions based on extracted skills
+            $skills = $analysis['skills'] ?? [];
+            $experience = $analysis['experience_years'] ?? '';
+            $suggestions = $openai->suggestJobsForSkills($skills, $experience, 5);
+
+            // Also include local job matching as fallback
+            $localSuggestions = [];
+            if (!empty($skills)) {
+                $jobs = Job::all();
+                $skillsLower = array_map(fn($s) => strtolower($s), $skills);
+
+                $scored = [];
+                foreach ($jobs as $job) {
+                    $text = strtolower($job->title . ' ' . ($job->description ?? '') . ' ' . ($job->requirements ? json_encode($job->requirements) : ''));
+                    $matchCount = 0;
+                    foreach ($skillsLower as $skill) {
+                        if ($skill === '') continue;
+                        if (str_contains($text, $skill)) $matchCount++;
+                    }
+                    $confidence = $matchCount > 0 ? min(100, (int) floor(($matchCount / max(1, count($skillsLower))) * 100)) : 0;
+
+                    if ($confidence > 0) {
+                        $scored[] = [
+                            'job_id' => $job->id,
+                            'title' => $job->title,
+                            'description' => strlen($job->description ?? '') > 200 ? substr($job->description, 0, 197) . '...' : ($job->description ?? ''),
+                            'recommended_level' => $job->type ?? 'mid',
+                            'confidence' => $confidence,
+                        ];
+                    }
+                }
+
+                usort($scored, fn($a, $b) => $b['confidence'] <=> $a['confidence']);
+                $localSuggestions = array_slice($scored, 0, 3);
+            }
+
+            // Combine OpenAI and local suggestions
+            $allSuggestions = array_merge($suggestions, $localSuggestions);
+            $uniqueSuggestions = [];
+            $seenTitles = [];
+
+            foreach ($allSuggestions as $suggestion) {
+                $title = $suggestion['title'] ?? '';
+                if (!in_array($title, $seenTitles)) {
+                    $uniqueSuggestions[] = $suggestion;
+                    $seenTitles[] = $title;
+                }
+            }
+
+            $finalSuggestions = array_slice($uniqueSuggestions, 0, 5);
+
+            return response()->json([
+                'analysis' => $analysis,
+                'suggestions' => $finalSuggestions,
+                'message' => 'Resume analyzed successfully! Here are job suggestions based on your experience.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Resume analysis failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+            return response()->json(['message' => 'Failed to analyze resume. Please try again.'], 500);
+        }
+    }
+
+    private function mapEducationLevel($education)
+    {
+        if (empty($education)) return '';
+
+        $educationString = strtolower(implode(' ', $education));
+
+        if (str_contains($educationString, 'phd') || str_contains($educationString, 'doctorate')) {
+            return 'phd';
+        } elseif (str_contains($educationString, 'master') || str_contains($educationString, 'ms') || str_contains($educationString, 'ma')) {
+            return 'master';
+        } elseif (str_contains($educationString, 'bachelor') || str_contains($educationString, 'bs') || str_contains($educationString, 'ba')) {
+            return 'bachelor';
+        } elseif (str_contains($educationString, 'associate')) {
+            return 'associate';
+        } elseif (str_contains($educationString, 'high school') || str_contains($educationString, 'diploma')) {
+            return 'high_school';
+        }
+
+        return '';
+    }
+
     public function skillChat(Request $request)
     {
         $request->validate([

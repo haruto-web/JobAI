@@ -13,11 +13,17 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::post('login', [AuthController::class, 'login']);
 Route::post('register', [AuthController::class, 'register']);
+Route::post('verify-email', [AuthController::class, 'verifyEmail']);
+Route::post('resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
 Route::get('jobs', [JobController::class, 'index']);
 Route::get('jobs/{id}', [JobController::class, 'show']);
 Route::get('jobs/search', [JobController::class, 'search']);
 Route::get('urgent-jobs', [JobController::class, 'urgentJobs']);
 Route::get('users/search', [UserController::class, 'search']);
+
+// Google OAuth routes
+Route::get('auth/google', [AuthController::class, 'redirectToGoogle']);
+Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 
 
 
@@ -54,7 +60,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // AI conversational chat
     Route::post('ai/chat', [\App\Http\Controllers\Api\AiController::class, 'chat']);
 
-
+    // AI resume chat
+    Route::post('ai/resume-chat', [\App\Http\Controllers\Api\AiController::class, 'resumeChat']);
 
     // Get chat history
     Route::get('ai/chat-history', [\App\Http\Controllers\Api\AiController::class, 'getChatHistory']);

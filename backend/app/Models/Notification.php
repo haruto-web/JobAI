@@ -4,6 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * App\Models\Notification
+ *
+ * @property int $id
+ * @property int $user_id
+ * @property string $type
+ * @property string $title
+ * @property string $message
+ * @property array|null $data
+ * @property bool $read
+ * @property \App\Models\User $user
+ */
 class Notification extends Model
 {
     protected $fillable = [

@@ -14,14 +14,22 @@ class GoogleController extends Controller
     // Redirect to Google
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+        $driver = Socialite::driver('google');
+
+        // stateless() is available on the two-provider implementation. Annotating the
+        // $driver variable above helps static analyzers (intelephense) understand
+        // the available methods and prevents false-positive "undefined method" warnings.
+        return $driver->stateless()->redirect();
     }
 
     // Handle callback
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            $driver = Socialite::driver('google');
+            $googleUser = $driver->stateless()->user();
 
             $user = User::updateOrCreate(
                 ['email' => $googleUser->getEmail()],

@@ -30,13 +30,40 @@ class AiController extends Controller
             $fileName = time() . '_' . $file->getClientOriginalName();
             $filePath = $file->storeAs('resumes', $fileName, 'public');
 
-            // Parse resume text
+            // Parse resume text (guard and return a helpful message if parsing fails)
             $parser = new ResumeParserService();
-            $resumeText = $parser->parseResume(storage_path('app/public/' . $filePath));
+            try {
+                $resumeText = $parser->parseResume(storage_path('app/public/' . $filePath));
+            } catch (\Throwable $e) {
+                Log::error('Resume chat analysis failed', ['error' => $e->getMessage()]);
+                return response()->json(['message' => 'Unsupported file type or could not parse resume. Please upload a PDF or Word document.'], 400);
+            }
 
-            // Analyze resume with OpenAI
-            $openai = new OpenAIService();
-            $analysis = $openai->analyzeResumeComprehensively($resumeText);
+            // Analyze resume with OpenAI if available; on failure, fall back to a safe default analysis
+            $analysis = null;
+            $openai = null;
+            try {
+                if (is_string(config('services.openai.api_key')) && trim(config('services.openai.api_key')) !== '') {
+                    $openai = new OpenAIService();
+                    $analysis = $openai->analyzeResumeComprehensively($resumeText);
+                } else {
+                    Log::info('OpenAI API key not configured; skipping AI analysis', ['user_id' => $user->id]);
+                }
+            } catch (\Throwable $e) {
+                // Log the error but continue with a sensible fallback so the endpoint doesn't return 500
+                Log::error('Resume analysis failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+                $analysis = [
+                    'skills' => [],
+                    'experience_years' => 'Unknown',
+                    'education' => [],
+                    'certifications' => [],
+                    'languages' => [],
+                    'summary' => 'AI analysis unavailable at the moment',
+                    'strengths' => [],
+                    'experience_level' => 'entry',
+                    'key_achievements' => []
+                ];
+            }
 
             // Update user profile with analysis
             $profile = $user->profile ?? new UserProfile(['user_id' => $user->id]);
@@ -67,7 +94,15 @@ class AiController extends Controller
             // Generate job suggestions based on extracted skills
             $skills = $analysis['skills'] ?? [];
             $experience = $analysis['experience_years'] ?? '';
-            $suggestions = $openai->suggestJobsForSkills($skills, $experience, 5);
+            $suggestions = [];
+            if ($openai) {
+                try {
+                    $suggestions = $openai->suggestJobsForSkills($skills, $experience, 5);
+                } catch (\Throwable $e) {
+                    Log::error('Job suggestion via OpenAI failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+                    $suggestions = [];
+                }
+            }
 
             // Also include local job matching as fallback
             $localSuggestions = [];

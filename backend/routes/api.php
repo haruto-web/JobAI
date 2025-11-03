@@ -19,9 +19,10 @@ Route::get('jobs/search', [JobController::class, 'search']);
 Route::get('urgent-jobs', [JobController::class, 'urgentJobs']);
 Route::get('users/search', [UserController::class, 'search']);
 
-// Google OAuth
-// Route::get('auth/google', [AuthController::class, 'redirectToGoogle']);
-// Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+// Google OAuth (use web-style redirect flow but exposed under /api for frontend)
+use App\Http\Controllers\Auth\GoogleController as SocialGoogleController;
+Route::get('auth/google', [SocialGoogleController::class, 'redirectToGoogle']);
+Route::get('auth/google/callback', [SocialGoogleController::class, 'handleGoogleCallback']);
 
 // Serve storage files
 Route::get('/storage/{path}', [StorageController::class, 'show'])->where('path', '.*');

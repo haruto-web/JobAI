@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController; // 👈 add this import
+use App\Http\Controllers\Auth\GoogleController; // use the GoogleController for social login
 
 Route::get('/', function () {
     return view('welcome');
@@ -15,8 +15,8 @@ Route::get('/dashboard', function () {
 Route::get('/api/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'index'])
     ->middleware('auth:sanctum');
 
-Route::get('auth/google', [AuthController::class, 'redirectToGoogle']);
-Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+Route::get('auth/google', [GoogleController::class, 'redirectToGoogle']);
+Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

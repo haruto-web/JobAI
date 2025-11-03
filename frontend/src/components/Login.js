@@ -27,7 +27,8 @@ function Login({ onLogin }) {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:8000/auth/google';
+    // Use API endpoint for social redirect
+    window.location.href = 'http://localhost:8000/api/auth/google';
   };
 
 

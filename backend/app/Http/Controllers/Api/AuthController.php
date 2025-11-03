@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Password;
 use App\Services\OpenAIService;
 use App\Services\ResumeParserService;
@@ -27,50 +26,47 @@ class AuthController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $status = Password::sendResetLink($request->only('email'));
 
-        if (!$user) {
-            return response()->json(['message' => 'If an account with that email exists, a password reset link has been sent.'], 200);
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json(['message' => 'Password reset link sent. Please check your email.']);
         }
 
-        $token = Password::createToken($user);
-
-        $user->sendPasswordResetNotification($token);
-
-        return response()->json(['message' => 'Password reset link sent! Please check your email.'], 200);
+        return response()->json(['message' => __($status)], 400);
     }
 
     /**
-     * Reset password
+     * Register a new user and return token + user payload.
      */
-    public function resetPassword(Request $request)
+    public function register(Request $request)
     {
         $request->validate([
-            'token' => 'required|string',
-            'email' => 'required|email',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
+            'user_type' => 'sometimes|in:jobseeker,employer,admin',
         ]);
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->forceFill([
-                    'password' => Hash::make($password)
-                ])->setRememberToken(Str::random(60));
+        $user = User::create([
+            'name' => $request->input('name'),
+            'email' => $request->input('email'),
+            'password' => Hash::make($request->input('password')),
+            'user_type' => $request->input('user_type', 'jobseeker'),
+        ]);
 
-                $user->save();
-            }
-        );
+        // Create empty profile
+        $user->profile()->create([]);
 
-        if ($status === Password::PASSWORD_RESET) {
-            return response()->json(['message' => 'Password reset successfully! You can now log in with your new password.'], 200);
-        }
+        $token = $user->createToken('api-token')->plainTextToken;
 
-        return response()->json(['message' => 'Invalid token or email.'], 400);
+        return response()->json([
+            'user' => $user->load('profile'),
+            'token' => $token,
+        ], 201);
     }
 
     /**
-     * Login user
+     * Login existing user and return token + user payload.
      */
     public function login(Request $request)
     {
@@ -79,27 +75,16 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $request->input('email'))->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->input('password'), $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        if (!$user->hasVerifiedEmail()) {
-            return response()->json([
-                'message' => 'Please verify your email address before logging in.',
-                'needs_verification' => true
-            ], 403);
-        }
-
-        // Create token
-        $token = $user->createToken('API Token')->plainTextToken;
-
-        // Avoid returning sensitive fields
-        $user->makeHidden(['password', 'remember_token']);
+        $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => $user->load('profile'),
             'token' => $token,
         ]);
     }
@@ -574,56 +559,10 @@ class AuthController extends Controller
         return response()->json(['message' => 'Verification email sent! Please check your email.'], 200);
     }
 
-    /**
-     * Redirect to Google OAuth
-     */
-    public function redirectToGoogle()
-    {
-        return Socialite::driver('google')->redirect();
-    }
-
-    /**
-     * Handle Google OAuth callback
-     */
-    public function handleGoogleCallback(Request $request)
-    {
-        try {
-            $googleUser = Socialite::driver('google')->user();
-
-            // Check if user already exists
-            $user = User::where('email', $googleUser->getEmail())->first();
-
-            if ($user) {
-                // User exists, log them in
-                if (!$user->hasVerifiedEmail()) {
-                    $user->markEmailAsVerified();
-                }
-            } else {
-                // Create new user
-                $user = User::create([
-                    'name' => $googleUser->getName(),
-                    'email' => $googleUser->getEmail(),
-                    'password' => Hash::make(Str::random(24)), // Random password since OAuth
-                    'user_type' => 'jobseeker', // Default to jobseeker
-                    'email_verified_at' => now(), // Google emails are verified
-                ]);
-            }
-
-            // Create token
-            $token = $user->createToken('API Token')->plainTextToken;
-
-            // Return user data with token
-            return response()->json([
-                'user' => $user->makeHidden(['password', 'remember_token']),
-                'token' => $token,
-                'message' => 'Successfully authenticated with Google!'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Google OAuth error', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Authentication failed'], 500);
-        }
-    }
+    // Google OAuth is handled by App\Http\Controllers\Auth\GoogleController
+    // The redirect and callback logic was intentionally removed from this API controller
+    // to keep a single canonical implementation in `Auth\GoogleController` and avoid
+    // session-related issues when using API (stateless) endpoints.
 
     /**
      * Ensure the given user has a profile record and return it.

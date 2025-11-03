@@ -141,21 +141,23 @@ function ChatBot({ isOpen, onToggle }) {
         }
       });
 
-      const analysis = response.data.analysis;
-      const suggestions = response.data.suggestions;
+      const analysis = (response && response.data && response.data.analysis) ? response.data.analysis : {};
+      const suggestions = (response && response.data && Array.isArray(response.data.suggestions)) ? response.data.suggestions : [];
 
-      let botResponse = `${response.data.message}\n\n`;
+      const messageText = (response && response.data && response.data.message) ? response.data.message : 'Resume processed';
 
-      // Add analysis summary
-      if (analysis.summary) {
+      let botResponse = `${messageText}\n\n`;
+
+      // Add analysis summary (guarded)
+      if (analysis && analysis.summary) {
         botResponse += `📄 Resume Summary: ${analysis.summary}\n\n`;
       }
 
-      if (analysis.skills && analysis.skills.length > 0) {
+      if (analysis && Array.isArray(analysis.skills) && analysis.skills.length > 0) {
         botResponse += `🛠️ Extracted Skills: ${analysis.skills.join(', ')}\n\n`;
       }
 
-      if (analysis.experience_years) {
+      if (analysis && analysis.experience_years) {
         botResponse += `📅 Experience: ${analysis.experience_years}\n\n`;
       }
 

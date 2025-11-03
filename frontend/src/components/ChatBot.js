@@ -9,7 +9,10 @@ function ChatBot({ isOpen, onToggle }) {
   const [input, setInput] = useState('');
   const [skills, setSkills] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingResume, setUploadingResume] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -119,7 +122,87 @@ function ChatBot({ isOpen, onToggle }) {
     }
   };
 
+  const handleResumeUpload = async () => {
+    if (!selectedFile || uploadingResume) return;
 
+    setMessages(prev => [...prev, { role: 'user', text: `Uploaded resume: ${selectedFile.name}` }]);
+    setUploadingResume(true);
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('resume', selectedFile);
+
+      const response = await axios.post(`${API_URL}/ai/resume-chat`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const analysis = response.data.analysis;
+      const suggestions = response.data.suggestions;
+
+      let botResponse = `${response.data.message}\n\n`;
+
+      // Add analysis summary
+      if (analysis.summary) {
+        botResponse += `📄 Resume Summary: ${analysis.summary}\n\n`;
+      }
+
+      if (analysis.skills && analysis.skills.length > 0) {
+        botResponse += `🛠️ Extracted Skills: ${analysis.skills.join(', ')}\n\n`;
+      }
+
+      if (analysis.experience_years) {
+        botResponse += `📅 Experience: ${analysis.experience_years}\n\n`;
+      }
+
+      botResponse += '💼 Job Suggestions:\n\n';
+      if (suggestions.length === 0) {
+        botResponse += 'I couldn\'t find any matches for your resume in our current job listings. Here are some general recommendations:\n\n1. Consider expanding your skill set with related technologies\n2. Look for entry-level positions in your field\n3. Check back later as new jobs are posted regularly\n\nTry searching our job listings page for more options!';
+      } else {
+        suggestions.forEach((job, index) => {
+          botResponse += `${index + 1}. ${job.title}\n   ${job.description}\n   Match: ${job.confidence || job.match_score || 'N/A'}%\n\n`;
+        });
+        botResponse += 'Would you like me to help you apply to any of these jobs or provide more details?';
+      }
+
+      setMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Resume upload error:', error);
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: 'Sorry, I couldn\'t analyze your resume right now. Please try again later.'
+      }]);
+    } finally {
+      setUploadingResume(false);
+      setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a PDF or Word document (.doc, .docx)');
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -199,7 +282,27 @@ function ChatBot({ isOpen, onToggle }) {
           </button>
         </div>
 
-
+        <div className="chatbot-resume">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx"
+            onChange={handleFileSelect}
+            disabled={loading}
+            style={{ display: 'none' }}
+            id="resume-upload"
+          />
+          <label htmlFor="resume-upload" className="resume-upload-label">
+            {selectedFile ? selectedFile.name : 'Choose Resume (PDF/DOC)'}
+          </label>
+          <button
+            onClick={handleResumeUpload}
+            disabled={!selectedFile || uploadingResume || loading}
+            className="resume-button"
+          >
+            {uploadingResume ? 'Analyzing...' : 'Analyze Resume'}
+          </button>
+        </div>
       </div>
     </div>
   );

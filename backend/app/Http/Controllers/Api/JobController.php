@@ -15,7 +15,7 @@ class JobController extends Controller
 {
     public function index()
     {
-        $jobs = Job::all();
+        $jobs = Job::where('status', 'published')->get();
 
         $user = Auth::user();
         if ($user && $user->user_type === 'jobseeker' && $user->profile) {
@@ -72,12 +72,15 @@ class JobController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
+            'summary' => 'nullable|string',
+            'qualifications' => 'nullable|string',
             'company' => 'required|string|max:255',
             'location' => 'required|string|max:255',
             'type' => 'string|in:full-time,part-time,contract',
             'salary' => 'numeric|min:0',
             'requirements' => 'array',
             'urgent' => 'boolean',
+            'status' => 'string|in:draft,published,archived',
         ]);
 
         $user = Auth::user();
@@ -87,7 +90,7 @@ class JobController extends Controller
             return response()->json(['message' => 'Only employers can create jobs'], 403);
         }
 
-        $job = Job::create(array_merge($validated, ['user_id' => $user->id]));
+        $job = Job::create(array_merge($validated, ['user_id' => $user->id, 'status' => $validated['status'] ?? 'published']));
 
         return response()->json($job, 201);
     }
@@ -109,12 +112,15 @@ class JobController extends Controller
         $validated = $request->validate([
             'title' => 'string|max:255',
             'description' => 'string',
+            'summary' => 'nullable|string',
+            'qualifications' => 'nullable|string',
             'company' => 'string|max:255',
             'location' => 'string|max:255',
             'type' => 'string|in:full-time,part-time,contract',
             'salary' => 'numeric|min:0',
             'requirements' => 'array',
             'urgent' => 'boolean',
+            'status' => 'string|in:draft,published,archived',
         ]);
 
         $job->update($validated);
@@ -146,10 +152,19 @@ class JobController extends Controller
             return response()->json(['jobs' => []]);
         }
 
-        $jobs = Job::where('title', 'like', '%' . $query . '%')
-            ->orWhere('description', 'like', '%' . $query . '%')
-            ->orWhere('company', 'like', '%' . $query . '%')
-            ->orWhere('location', 'like', '%' . $query . '%')
+        $searchTerm = strtolower($query);
+
+        $jobs = Job::where('status', 'published')
+            ->where(function($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(title) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('LOWER(description) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('LOWER(summary) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('LOWER(qualifications) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('LOWER(company) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('LOWER(location) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('LOWER(type) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('CAST(salary AS CHAR) LIKE ?', ['%' . $searchTerm . '%']);
+            })
             ->limit(20)
             ->get();
 
@@ -158,8 +173,21 @@ class JobController extends Controller
 
     public function urgentJobs()
     {
-        $urgentJobs = Job::where('urgent', true)->get();
+        $urgentJobs = Job::where('status', 'published')
+            ->where('urgent', true)
+            ->get();
         return response()->json($urgentJobs);
+    }
+
+    public function employerJobs(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || $user->user_type !== 'employer') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $jobs = Job::where('user_id', $user->id)->get();
+        return response()->json($jobs);
     }
 
     /**

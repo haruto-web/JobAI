@@ -1,8 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../utils/axios';
 import './ChatBot.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// Simple function to convert markdown-like formatting to HTML
+const formatMessage = (text) => {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+    .replace(/\n/g, '<br />') // Line breaks
+    .replace(/✅/g, '<span style="color: green;">✅</span>')
+    .replace(/✏️/g, '<span style="color: blue;">✏️</span>')
+    .replace(/❌/g, '<span style="color: red;">❌</span>');
+};
+
+// Function to parse job draft from bot message text
+const parseJobDraftFromMessage = (message) => {
+  if (!message.includes('**Job Posting Draft**')) return null;
+
+  const lines = message.split('\n');
+  const draft = {};
+
+  for (const line of lines) {
+    if (line.startsWith('**Title:**')) {
+      draft.title = line.replace('**Title:**', '').trim();
+    } else if (line.startsWith('**Location:**')) {
+      draft.location = line.replace('**Location:**', '').trim();
+    } else if (line.startsWith('**Type:**')) {
+      draft.type = line.replace('**Type:**', '').trim();
+    } else if (line.startsWith('**Summary:**')) {
+      draft.summary = line.replace('**Summary:**', '').trim();
+    } else if (line.startsWith('**Description:**')) {
+      draft.description = line.replace('**Description:**', '').trim();
+    } else if (line.startsWith('**Salary:**')) {
+      draft.salary = line.replace('**Salary:**', '').trim();
+    }
+  }
+
+  return Object.keys(draft).length > 0 ? draft : null;
+};
 
 function ChatBot({ isOpen, onToggle }) {
   const [messages, setMessages] = useState([]);
@@ -11,6 +45,8 @@ function ChatBot({ isOpen, onToggle }) {
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [userType, setUserType] = useState(null);
+  const [jobDraft, setJobDraft] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -22,35 +58,42 @@ function ChatBot({ isOpen, onToggle }) {
     scrollToBottom();
   }, [messages]);
 
-  // Load chat history on component mount
+  // Load user type and chat history on component mount
   useEffect(() => {
-    const loadChatHistory = async () => {
+    const loadUserData = async () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await axios.get(`${API_URL}/ai/chat-history`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Get user profile to determine user type
+        const profileResponse = await api.get('/user');
+        const currentUserType = profileResponse.data.user_type || 'jobseeker';
+        setUserType(currentUserType);
+
+        const response = await api.get('/ai/chat-history');
 
         const historyMessages = response.data.messages.map(msg => ({
           role: msg.role,
           text: msg.message
         }));
 
+        const defaultMessage = currentUserType === 'employer'
+          ? 'Hi! I\'m your AI assistant for hiring. I can help you create job postings, manage candidates, and provide hiring advice!'
+          : 'Hi! I\'m your AI career advisor. Share your skills or upload your resume to get personalized job recommendations!';
+
         if (historyMessages.length === 0) {
-          setMessages([{ role: 'bot', text: 'Hi! I\'m your AI career advisor. Share your skills or upload your resume to get personalized job recommendations!' }]);
+          setMessages([{ role: 'bot', text: defaultMessage }]);
         } else {
           setMessages(historyMessages);
         }
       } catch (error) {
-        console.error('Failed to load chat history:', error);
+        console.error('Failed to load user data:', error);
         setMessages([{ role: 'bot', text: 'Hi! I\'m your AI career advisor. Share your skills or upload your resume to get personalized job recommendations!' }]);
       }
     };
 
     if (isOpen) {
-      loadChatHistory();
+      loadUserData();
     }
   }, [isOpen]);
 
@@ -63,14 +106,23 @@ function ChatBot({ isOpen, onToggle }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/ai/chat`, {
+      const response = await api.post('/ai/chat', {
         message: userMessage
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
-      setMessages(prev => [...prev, { role: 'bot', text: response.data.response }]);
+      const botResponse = response.data.response;
+      setMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
+
+      // Check if this is a job creation response with draft
+      if (response.data.job_draft) {
+        setJobDraft(response.data.job_draft);
+      } else {
+        // Parse job draft from message text if present
+        const parsedDraft = parseJobDraftFromMessage(botResponse);
+        if (parsedDraft) {
+          setJobDraft(parsedDraft);
+        }
+      }
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
@@ -91,12 +143,9 @@ function ChatBot({ isOpen, onToggle }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/ai/skill-chat`, {
+      const response = await api.post('/ai/skill-chat', {
         skills: skillsList.split(',').map(s => s.trim()),
         limit: 5
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       const suggestions = response.data.suggestions;
@@ -130,13 +179,11 @@ function ChatBot({ isOpen, onToggle }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('resume', selectedFile);
 
-      const response = await axios.post(`${API_URL}/ai/resume-chat`, formData, {
+      const response = await api.post('/ai/resume-chat', formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -213,6 +260,36 @@ function ChatBot({ isOpen, onToggle }) {
     }
   };
 
+  const handleJobAction = async (action, field = null) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/ai/job-action', {
+        action,
+        field,
+        job_draft: jobDraft
+      });
+
+      const botResponse = response.data.response;
+      setMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
+
+      if (action === 'approve') {
+        setJobDraft(null);
+      } else if (action === 'cancel') {
+        setJobDraft(null);
+      } else if (action === 'edit' && response.data.job_draft) {
+        setJobDraft(response.data.job_draft);
+      }
+    } catch (error) {
+      console.error('Job action error:', error);
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: 'Sorry, I couldn\'t process that action. Please try again.'
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) {
     return (
       <div className="chatbot-fab" onClick={onToggle} title="Open AI Chat">
@@ -224,15 +301,14 @@ function ChatBot({ isOpen, onToggle }) {
   return (
     <div className="chatbot-container">
       <div className="chatbot-header">
-        <h3>AI Career Advisor</h3>
+        <h3>{userType === 'employer' ? 'AI Hiring Assistant' : 'AI Career Advisor'}</h3>
         <button className="chatbot-close" onClick={onToggle}>×</button>
       </div>
 
       <div className="chatbot-messages">
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.role}`}>
-            <div className="message-content">
-              {msg.text}
+            <div className="message-content" dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }}>
             </div>
           </div>
         ))}
@@ -254,7 +330,7 @@ function ChatBot({ isOpen, onToggle }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask me about jobs, skills, career advice..."
+            placeholder={userType === 'employer' ? 'Ask me about job creation, hiring strategies...' : 'Ask me about jobs, skills, career advice...'}
             disabled={loading}
             rows={1}
           />
@@ -267,44 +343,88 @@ function ChatBot({ isOpen, onToggle }) {
           </button>
         </div>
 
-        <div className="chatbot-skills">
-          <input
-            type="text"
-            value={skills}
-            onChange={(e) => setSkills(e.target.value)}
-            placeholder="Enter your skills (comma-separated)"
-            disabled={loading}
-          />
-          <button
-            onClick={handleSkillsSubmit}
-            disabled={!skills.trim() || loading}
-            className="skills-button"
-          >
-            Get Job Suggestions
-          </button>
-        </div>
+        {userType !== 'employer' && (
+          <>
+            <div className="chatbot-skills">
+              <input
+                type="text"
+                value={skills}
+                onChange={(e) => setSkills(e.target.value)}
+                placeholder="Enter your skills (comma-separated)"
+                disabled={loading}
+              />
+              <button
+                onClick={handleSkillsSubmit}
+                disabled={!skills.trim() || loading}
+                className="skills-button"
+              >
+                Get Job Suggestions
+              </button>
+            </div>
 
-        <div className="chatbot-resume">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            onChange={handleFileSelect}
-            disabled={loading}
-            style={{ display: 'none' }}
-            id="resume-upload"
-          />
-          <label htmlFor="resume-upload" className="resume-upload-label">
-            {selectedFile ? selectedFile.name : 'Choose Resume (PDF/DOC)'}
-          </label>
-          <button
-            onClick={handleResumeUpload}
-            disabled={!selectedFile || uploadingResume || loading}
-            className="resume-button"
-          >
-            {uploadingResume ? 'Analyzing...' : 'Analyze Resume'}
-          </button>
-        </div>
+            <div className="chatbot-resume">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileSelect}
+                disabled={loading}
+                style={{ display: 'none' }}
+                id="resume-upload"
+              />
+              <label htmlFor="resume-upload" className="resume-upload-label">
+                {selectedFile ? selectedFile.name : 'Choose Resume (PDF/DOC)'}
+              </label>
+              <button
+                onClick={handleResumeUpload}
+                disabled={!selectedFile || uploadingResume || loading}
+                className="resume-button"
+              >
+                {uploadingResume ? 'Analyzing...' : 'Analyze Resume'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {userType === 'employer' && (
+          <div className="chatbot-job-creation">
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+              Try saying: "Create a job: Title, Company, Location, Job-tyle, Salary"
+            </p>
+            {jobDraft && (
+              <div className="job-draft">
+                <h4>Job Draft Preview</h4>
+                <p><strong>Title:</strong> {jobDraft.title}</p>
+                <p><strong>Description:</strong> {jobDraft.description}</p>
+                <p><strong>Requirements:</strong> {jobDraft.requirements}</p>
+                <p><strong>Salary:</strong> {jobDraft.salary}</p>
+                <div className="job-actions">
+                  <button
+                    className="job-action-btn approve"
+                    onClick={() => handleJobAction('approve')}
+                    disabled={loading}
+                  >
+                    ✅ Approve
+                  </button>
+                  <button
+                    className="job-action-btn edit"
+                    onClick={() => handleJobAction('edit')}
+                    disabled={loading}
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    className="job-action-btn cancel"
+                    onClick={() => handleJobAction('cancel')}
+                    disabled={loading}
+                  >
+                    ❌ Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

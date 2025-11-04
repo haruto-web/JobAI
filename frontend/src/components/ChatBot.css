@@ -282,6 +282,68 @@
   transform: scale(1.05);
 }
 
+.job-draft {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.job-draft h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.job-draft p {
+  margin: 4px 0;
+  color: #666;
+}
+
+.job-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.job-action-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.job-action-btn.approve {
+  background: #28a745;
+  color: white;
+}
+
+.job-action-btn.edit {
+  background: #ffc107;
+  color: #333;
+}
+
+.job-action-btn.cancel {
+  background: #dc3545;
+  color: white;
+}
+
+.job-action-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.job-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 480px) {
   .chatbot-container {

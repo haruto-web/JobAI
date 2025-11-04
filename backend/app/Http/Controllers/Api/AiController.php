@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\OpenAIService;
 use App\Services\ResumeParserService;
+use App\Services\WebSearchService;
 use App\Models\Job;
 use App\Models\ChatMessage;
 use App\Models\UserProfile;
@@ -250,8 +251,144 @@ class AiController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
+        $message = $request->input('message');
 
+        // Save user message
+        ChatMessage::create([
+            'user_id' => $user->id,
+            'role' => 'user',
+            'message' => $message,
+        ]);
 
+        // Check if user is employer and has ongoing job creation session
+        if ($user->user_type === 'employer') {
+            $sessionKey = "job_creation_{$user->id}";
+            $jobDraft = session($sessionKey, []);
+            if (!empty($jobDraft)) {
+                return $this->processJobCreationStep($message, $user, $jobDraft, $sessionKey);
+            }
+        }
+
+        // Check if user is employer and message contains "create job for me"
+        if ($user->user_type === 'employer' && $this->isJobCreationRequest($message)) {
+            return $this->handleJobCreation($message, $user);
+        }
+
+        // Check if message requires web search
+        $requiresSearch = false;
+        $searchResults = [];
+        try {
+            $webSearchService = new WebSearchService();
+            $requiresSearch = $webSearchService->requiresWebSearch($message);
+            if ($requiresSearch) {
+                $searchResults = $webSearchService->search($message, 5);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::info('Web search not available', ['error' => $e->getMessage()]);
+        }
+
+        // If OpenAI key is not configured, provide a simple fallback response
+        if (!is_string(config('services.openai.api_key')) || trim(config('services.openai.api_key')) === '') {
+            Log::info('OpenAI API key not configured - using simple fallback for chat', ['user_id' => $user->id]);
+
+            $response = $this->generateFallbackResponse($message, $user);
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+        }
+
+        try {
+            $openai = new OpenAIService();
+
+            // Build context from user's profile if available
+            $context = '';
+            if ($user->profile) {
+                $profile = $user->profile;
+                $context = "User profile data: ";
+                $context .= "ID: " . ($profile->id ?? '') . ". ";
+                $context .= "Bio: " . ($profile->bio ?? '') . ". ";
+                $context .= "Skills: " . (is_array($profile->skills) ? implode(', ', $profile->skills) : ($profile->skills ?? '')) . ". ";
+                $context .= "Experience level: " . ($profile->experience_level ?? '') . ". ";
+                $context .= "Education attainment: " . ($profile->education_attainment ?? '') . ". ";
+                $context .= "Portfolio URL: " . ($profile->portfolio_url ?? '') . ". ";
+                $context .= "Resume URL: " . ($profile->resume_url ?? '') . ". ";
+                $context .= "Resumes: " . (is_array($profile->resumes) ? json_encode($profile->resumes) : ($profile->resumes ?? '')) . ". ";
+                $context .= "AI analysis: " . (is_array($profile->ai_analysis) ? json_encode($profile->ai_analysis) : ($profile->ai_analysis ?? '')) . ". ";
+                $context .= "Extracted experience: " . ($profile->extracted_experience ?? '') . ". ";
+                $context .= "Extracted education: " . ($profile->extracted_education ?? '') . ". ";
+                $context .= "Extracted certifications: " . ($profile->extracted_certifications ?? '') . ". ";
+                $context .= "Extracted languages: " . ($profile->extracted_languages ?? '') . ". ";
+                $context .= "Resume summary: " . ($profile->resume_summary ?? '') . ". ";
+                $context .= "Last AI analysis: " . ($profile->last_ai_analysis ?? '') . ". ";
+            }
+
+            // Different system prompt based on user type
+            if ($user->user_type === 'employer') {
+                $systemPrompt = "You are an AI assistant for employers on a job recommendation website. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Common topics include: creating effective job descriptions, reviewing applications, interview scheduling, hiring best practices, and managing job listings. Be professional, helpful, and focused on employer needs. Provide actionable advice for successful hiring.";
+            } else {
+                $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Common topics include: finding jobs by location/skill/type, applying for jobs, uploading resumes, cover letter tips, company details, interview preparation, application status, and career improvement. Be friendly, helpful, and professional. Use the provided context about the user when relevant. If asked about specific jobs, reference available job listings. Provide actionable advice and keep responses concise but informative. Always encourage next steps and offer to help further.";
+            }
+
+            // Fetch recent chat history
+            $chatHistory = ChatMessage::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(5) // Get last 5 messages for context
+                ->get()
+                ->reverse(); // Reverse to get chronological order
+
+            $messagesForOpenAI = [['role' => 'system', 'content' => $systemPrompt . ' ' . $context]];
+
+            foreach ($chatHistory as $chatMessage) {
+                $messagesForOpenAI[] = [
+                    'role' => $chatMessage->role,
+                    'content' => $chatMessage->message
+                ];
+            }
+
+            // Add the current user message
+            $messagesForOpenAI[] = ['role' => 'user', 'content' => $message];
+
+            if ($requiresSearch && !empty($searchResults)) {
+                $aiResponse = $openai->generateSearchEnhancedResponse($message, $searchResults, $user->user_type);
+            } else {
+                $response = $openai->getClient()->chat()->create([
+                    'model' => 'gpt-3.5-turbo',
+                    'messages' => $messagesForOpenAI,
+                    'max_tokens' => 500,
+                ]);
+                $aiResponse = $response->choices[0]->message->content;
+            }
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $aiResponse,
+            ]);
+
+            return response()->json(['response' => $aiResponse]);
+        } catch (\Throwable $e) {
+            Log::error('AI chat failed', ['error' => $e->getMessage()]);
+
+            // Fallback response
+            $response = $this->generateFallbackResponse($message, $user);
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+        }
+    }
 
     public function getChatHistory(Request $request)
     {
@@ -271,14 +408,20 @@ class AiController extends Controller
     private function generateFallbackResponse($message, $user)
     {
         $messageLower = strtolower($message);
+        $isEmployer = $user->user_type === 'employer';
 
-        // Job Search & Matching
+        // Job Search & Matching - Different for employers vs job seekers
         if (str_contains($messageLower, 'what jobs') || str_contains($messageLower, 'available for me') ||
             str_contains($messageLower, 'show me') && str_contains($messageLower, 'jobs') ||
             str_contains($messageLower, 'part-time') || str_contains($messageLower, 'remote') ||
             str_contains($messageLower, 'near') || str_contains($messageLower, 'location') ||
             str_contains($messageLower, 'jobs')) {
-            // Check if user has profile/skills
+
+            if ($isEmployer) {
+                return "As an employer, you can create job postings to attract candidates. Would you like me to help you create a job posting? Just tell me details like the position, requirements, and salary range.";
+            }
+
+            // Job seeker logic
             $profile = $user->profile;
             $hasSkills = $profile && is_array($profile->skills) && count($profile->skills) > 0;
             if ($hasSkills) {
@@ -344,11 +487,416 @@ class AiController extends Controller
         elseif (str_contains($messageLower, 'which jobs fit') || str_contains($messageLower, 'improve my résumé') ||
                 str_contains($messageLower, 'courses') || str_contains($messageLower, 'get hired faster') ||
                 str_contains($messageLower, 'career') || str_contains($messageLower, 'advice')) {
+            if ($isEmployer) {
+                return "As an employer, I can help you with hiring strategies, creating effective job descriptions, and managing your recruitment process. What specific aspect of hiring would you like assistance with?";
+            }
             return "For career advice, share your skills below to get job suggestions! To improve your resume, focus on quantifiable achievements and relevant skills. Consider online courses on platforms like Coursera or Udemy to boost your employability.";
         }
         // General fallback
         else {
+            if ($isEmployer) {
+                return "I'm here to help employers with job posting creation, candidate management, hiring strategies, and company branding. What can I assist you with today?";
+            }
             return "I'm here to help with your job search! You can ask me about finding jobs, applying for positions, interview preparation, resume tips, career advice, or check our job listings page. What would you like to know?";
         }
+    }
+
+    private function isJobCreationRequest($message)
+    {
+        $messageLower = strtolower($message);
+        return str_contains($messageLower, 'create job for me') ||
+               str_contains($messageLower, 'create a job') ||
+               str_contains($messageLower, 'generate job') ||
+               str_contains($messageLower, 'make a job posting');
+    }
+
+    private function handleJobCreation($message, $user)
+    {
+        // Parse the message for job details
+        $parsedDetails = $this->parseJobDetails($message);
+
+        // If we have enough details (title, location, salary), create the job directly
+        if (!empty($parsedDetails['job']) && !empty($parsedDetails['location']) && !empty($parsedDetails['salary'])) {
+            return $this->createJobDirectly($parsedDetails, $user);
+        }
+
+        // Check if user already has a job creation session in progress
+        $sessionKey = "job_creation_{$user->id}";
+        $jobDraft = session($sessionKey, []);
+
+        // If no session exists, start new job creation flow
+        if (empty($jobDraft)) {
+            $jobDraft = [
+                'step' => 'title',
+                'data' => []
+            ];
+            session([$sessionKey => $jobDraft]);
+
+            $response = "Great! Let's create a job posting together. First, what's the job title? (e.g., Software Developer, Marketing Manager)";
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+        }
+
+        // Handle ongoing job creation flow
+        return $this->processJobCreationStep($message, $user, $jobDraft, $sessionKey);
+    }
+
+    private function processJobCreationStep($message, $user, $jobDraft, $sessionKey)
+    {
+        $currentStep = $jobDraft['step'];
+        $data = $jobDraft['data'];
+
+        switch ($currentStep) {
+            case 'title':
+                $data['title'] = trim($message);
+                $jobDraft['step'] = 'location';
+                $jobDraft['data'] = $data;
+                session([$sessionKey => $jobDraft]);
+
+                $response = "Got it! Job title: {$data['title']}\n\nNext, where is this position located? (e.g., New York, Remote, San Francisco)";
+
+                break;
+
+            case 'location':
+                $data['location'] = trim($message);
+                $jobDraft['step'] = 'type';
+                $jobDraft['data'] = $data;
+                session([$sessionKey => $jobDraft]);
+
+                $response = "Location set to: {$data['location']}\n\nWhat type of employment is this? (Full-time, Part-time, Contract, Freelance)";
+
+                break;
+
+            case 'type':
+                $type = strtolower(trim($message));
+                $validTypes = ['full-time', 'part-time', 'contract', 'freelance'];
+                if (!in_array($type, $validTypes)) {
+                    $response = "Please choose from: Full-time, Part-time, Contract, or Freelance.";
+                    break;
+                }
+                $data['type'] = $type;
+                $jobDraft['step'] = 'summary';
+                $jobDraft['data'] = $data;
+                session([$sessionKey => $jobDraft]);
+
+                $response = "Job type: {$data['type']}\n\nNow, provide a brief job summary (1-2 sentences describing the role).";
+
+                break;
+
+            case 'summary':
+                $data['summary'] = trim($message);
+                $jobDraft['step'] = 'description';
+                $jobDraft['data'] = $data;
+                session([$sessionKey => $jobDraft]);
+
+                $response = "Summary added!\n\nPlease provide a detailed job description including duties and responsibilities.";
+
+                break;
+
+            case 'description':
+                $data['description'] = trim($message);
+                $jobDraft['step'] = 'salary';
+                $jobDraft['data'] = $data;
+                session([$sessionKey => $jobDraft]);
+
+                $response = "Description added!\n\nWhat's the salary range or compensation? (e.g., $50,000 - $80,000, Competitive, DOE - Daily Rate)";
+
+                break;
+
+            case 'salary':
+                $data['salary'] = trim($message);
+                $jobDraft['step'] = 'review';
+                $jobDraft['data'] = $data;
+                session([$sessionKey => $jobDraft]);
+
+                $response = $this->generateJobDraftPreview($data);
+
+                break;
+
+            case 'review':
+                $messageLower = strtolower(trim($message));
+                if (str_contains($messageLower, 'approve') || str_contains($messageLower, 'post') || str_contains($messageLower, 'publish')) {
+                    return $this->finalizeJobPosting($user, $data, $sessionKey);
+                } elseif (str_contains($messageLower, 'edit') || str_contains($messageLower, 'change')) {
+                    $jobDraft['step'] = 'edit_choice';
+                    session([$sessionKey => $jobDraft]);
+                    $response = "Which part would you like to edit? Reply with: title, location, type, summary, description, or salary.";
+                } elseif (str_contains($messageLower, 'cancel')) {
+                    session()->forget($sessionKey);
+                    $response = "Job creation cancelled. Let me know if you'd like to start over!";
+                } else {
+                    $response = "Please choose: 'Approve and post', 'Edit', or 'Cancel'.";
+                }
+                break;
+
+            case 'edit_choice':
+                $field = strtolower(trim($message));
+                $validFields = ['title', 'location', 'type', 'summary', 'description', 'salary'];
+                if (!in_array($field, $validFields)) {
+                    $response = "Please choose from: title, location, type, summary, description, or salary.";
+                    break;
+                }
+                $jobDraft['step'] = 'editing_' . $field;
+                session([$sessionKey => $jobDraft]);
+                $response = "Current {$field}: " . ($data[$field] ?? 'Not set') . "\n\nWhat's the new {$field}?";
+
+                break;
+
+            default:
+                // Handle editing specific fields
+                if (str_starts_with($currentStep, 'editing_')) {
+                    $field = str_replace('editing_', '', $currentStep);
+                    $data[$field] = trim($message);
+                    $jobDraft['step'] = 'review';
+                    $jobDraft['data'] = $data;
+                    session([$sessionKey => $jobDraft]);
+                    $response = "Updated! Here's the revised draft:\n\n" . $this->generateJobDraftPreview($data);
+                } else {
+                    $response = "I'm not sure what you mean. Let's continue with the job creation.";
+                }
+                break;
+        }
+
+        // Save bot response
+        ChatMessage::create([
+            'user_id' => $user->id,
+            'role' => 'bot',
+            'message' => $response,
+        ]);
+
+        return response()->json(['response' => $response]);
+    }
+
+    private function generateJobDraftPreview($data)
+    {
+        $preview = "**Job Posting Draft**\n\n";
+        $preview .= "**Title:** {$data['title']}\n";
+        $preview .= "**Location:** {$data['location']}\n";
+        $preview .= "**Type:** {$data['type']}\n";
+        $preview .= "**Summary:** {$data['summary']}\n";
+        $preview .= "**Description:** {$data['description']}\n";
+        $preview .= "**Salary:** {$data['salary']}\n\n";
+        $preview .= "Do you want to:\n✅ **Approve and post**\n✏️ **Edit** (tell me what to change)\n❌ **Cancel**";
+
+        return $preview;
+    }
+
+    private function finalizeJobPosting($user, $data, $sessionKey)
+    {
+        try {
+            // Create the job
+            $job = Job::create([
+                'title' => $data['title'],
+                'location' => $data['location'],
+                'type' => $data['type'],
+                'summary' => $data['summary'],
+                'description' => $data['description'],
+                'salary' => is_numeric($data['salary']) ? (float) $data['salary'] : null,
+                'company' => $user->name ?? 'Company', // Use user's name as company or default
+                'user_id' => $user->id,
+                'status' => 'published',
+                'requirements' => [], // Can be expanded later
+            ]);
+
+            // Clear the session
+            session()->forget($sessionKey);
+
+            $response = "🎉 Job posted successfully! Your job '{$data['title']}' is now live and visible to job seekers.\n\n";
+            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+
+        } catch (\Exception $e) {
+            Log::error('Job creation failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+
+            $response = "Sorry, there was an error posting your job. Please try again or contact support.";
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+        }
+    }
+
+    private function parseJobDetails($message)
+    {
+        $details = [];
+        $messageLower = strtolower($message);
+
+        // Extract job title - handle "create a job:" or similar patterns
+        if (preg_match('/(?:job|position|role)(?:\s+of)?[\s:]+([^,\n]+)/i', $message, $matches)) {
+            $details['job'] = trim($matches[1]);
+        }
+
+        // Extract company
+        if (preg_match('/(?:company|at)\s+([^,\n]+)/i', $message, $matches)) {
+            $details['company'] = trim($matches[1]);
+        }
+
+        // Extract location - handle "located in" or "in"
+        if (preg_match('/(?:location|located\s+in|in)\s+([^,\n]+)/i', $message, $matches)) {
+            $details['location'] = trim($matches[1]);
+        }
+
+        // Extract type
+        if (preg_match('/(?:type|employment)\s+(full-time|part-time|contract|freelance|remote|on-site)/i', $message, $matches)) {
+            $details['type'] = trim($matches[1]);
+        }
+
+        // Extract salary
+        if (preg_match('/(?:salary|pay|compensation)\s+(?:of\s+)?([^\n]+)/i', $message, $matches)) {
+            $details['salary'] = trim($matches[1]);
+        }
+
+        return $details;
+    }
+
+    private function createJobDirectly($parsedDetails, $user)
+    {
+        try {
+            // Create the job with parsed details
+            $job = Job::create([
+                'title' => $parsedDetails['job'],
+                'location' => $parsedDetails['location'],
+                'type' => $parsedDetails['type'] ?? 'full-time',
+                'summary' => 'Job created via AI chat', // Default summary
+                'description' => 'Job description to be updated by employer.', // Default description
+                'salary' => is_numeric($parsedDetails['salary']) ? (float) $parsedDetails['salary'] : null,
+                'company' => $parsedDetails['company'] ?? $user->name ?? 'Company',
+                'user_id' => $user->id,
+                'status' => 'published',
+                'requirements' => [],
+            ]);
+
+            $response = "🎉 Job posted successfully! Your job '{$parsedDetails['job']}' is now live and visible to job seekers.\n\n";
+            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+
+        } catch (\Exception $e) {
+            Log::error('Direct job creation failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+
+            $response = "Sorry, there was an error posting your job. Please try again or contact support.";
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+        }
+    }
+
+    public function jobAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:approve,edit,cancel',
+            'field' => 'nullable|string',
+            'job_draft' => 'required|array'
+        ]);
+
+        $user = Auth::user();
+        if (!$user || $user->user_type !== 'employer') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $action = $request->input('action');
+        $field = $request->input('field');
+        $jobDraft = $request->input('job_draft');
+
+        try {
+            if ($action === 'approve') {
+                // Create the job
+                $job = Job::create([
+                    'title' => $jobDraft['title'],
+                    'location' => $jobDraft['location'] ?? '',
+                    'type' => $jobDraft['type'] ?? 'full-time',
+                    'summary' => $jobDraft['summary'] ?? '',
+                    'description' => $jobDraft['description'],
+                    'salary' => is_numeric($jobDraft['salary']) ? (float) $jobDraft['salary'] : null,
+                    'company' => $user->name ?? 'Company',
+                    'user_id' => $user->id,
+                    'status' => 'published',
+                    'requirements' => [],
+                ]);
+
+                $response = "🎉 Job posted successfully! Your job '{$jobDraft['title']}' is now live and visible to job seekers.\n\n";
+                $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+
+            } elseif ($action === 'edit') {
+                // For edit, we need to ask which field to update
+                $response = "Which part would you like to edit? Reply with: title, location, type, summary, description, or salary.";
+
+            } elseif ($action === 'cancel') {
+                $response = "Job creation cancelled. Let me know if you'd like to start over!";
+            }
+
+            return response()->json([
+                'response' => $response,
+                'job_draft' => $action === 'edit' ? $jobDraft : null
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Job action failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+            return response()->json(['message' => 'Failed to process job action. Please try again.'], 500);
+        }
+    }
+
+    private function generateFallbackJob($details)
+    {
+        $job = "**Job Posting**\n\n";
+
+        $job .= "**Job Title:** " . ($details['job'] ?? 'Software Developer') . "\n";
+        $job .= "**Company:** " . ($details['company'] ?? 'Tech Company') . "\n";
+        $job .= "**Location:** " . ($details['location'] ?? 'Remote') . "\n";
+        $job .= "**Job Type:** " . ($details['type'] ?? 'Full-time') . "\n";
+        $job .= "**Salary:** " . ($details['salary'] ?? '$50,000 - $80,000 per year') . "\n\n";
+
+        $job .= "**Job Description:**\n";
+        $job .= "We are looking for a talented professional to join our team. This role offers an exciting opportunity to work on innovative projects and contribute to our company's growth.\n\n";
+
+        $job .= "**Requirements:**\n";
+        $job .= "- Relevant experience in the field\n";
+        $job .= "- Strong communication skills\n";
+        $job .= "- Ability to work in a team environment\n";
+        $job .= "- Problem-solving abilities\n\n";
+
+        $job .= "**Benefits:**\n";
+        $job .= "- Competitive salary\n";
+        $job .= "- Health insurance\n";
+        $job .= "- Paid time off\n";
+        $job .= "- Professional development opportunities\n\n";
+
+        $job .= "**How to Apply:**\n";
+        $job .= "Please submit your resume and cover letter through our website. We look forward to hearing from you!";
+
+        return $job;
     }
 }

@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('jobs', [JobController::class, 'store']);
     Route::put('jobs/{id}', [JobController::class, 'update']);
     Route::delete('jobs/{id}', [JobController::class, 'destroy']);
+    Route::get('employer/jobs', [JobController::class, 'employerJobs']);
 
     // Applications
     Route::get('applications', [ApplicationController::class, 'index']);
@@ -60,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('ai/chat', [AiController::class, 'chat']);
     Route::post('ai/resume-chat', [AiController::class, 'resumeChat']);
     Route::get('ai/chat-history', [AiController::class, 'getChatHistory']);
+    Route::post('ai/job-action', [AiController::class, 'jobAction']);
 
     // Payments
     Route::get('payments', [PaymentController::class, 'index']);

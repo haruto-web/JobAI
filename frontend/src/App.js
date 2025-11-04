@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import api from './utils/axios';
 import Navigation from './components/Navigation';
 import Loading from './components/Loading';
 import Login from './components/Login';
@@ -24,7 +24,7 @@ function App() {
 
   const handleLogin = async (email, password) => {
     try {
-      const response = await axios.post(`${API_URL}/login`, { email, password });
+      const response = await api.post('/login', { email, password });
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
       setIsLoggedIn(true);
@@ -42,7 +42,7 @@ function App() {
 
   const handleRegister = async (userData) => {
     try {
-      const response = await axios.post(`${API_URL}/register`, userData);
+      const response = await api.post('/register', userData);
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
       setIsLoggedIn(true);
@@ -58,10 +58,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/logout`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post('/logout');
       localStorage.removeItem('token');
       setIsLoggedIn(false);
       setUser(null);
@@ -80,9 +77,7 @@ function App() {
         return;
       }
       try {
-        const response = await axios.get(`${API_URL}/user`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/user');
         setUser(response.data);
         setIsLoggedIn(true);
       } catch (error) {

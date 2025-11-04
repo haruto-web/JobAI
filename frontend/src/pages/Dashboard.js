@@ -13,6 +13,8 @@ function Dashboard() {
   const [jobForm, setJobForm] = useState({
     title: '',
     description: '',
+    summary: '',
+    qualifications: '',
     company: '',
     location: '',
     type: 'full-time',
@@ -67,7 +69,12 @@ function Dashboard() {
   };
 
   const handleEditJob = (job) => {
-    setEditingJob({ ...job, requirements: job.requirements || [] }); // Initialize requirements as array if null
+    setEditingJob({
+      ...job,
+      requirements: job.requirements || [],
+      summary: job.summary || '',
+      qualifications: job.qualifications || ''
+    }); // Initialize missing fields
     setShowEditModal(true);
   };
 
@@ -572,8 +579,16 @@ function Dashboard() {
                   {dashboardData.jobs.map(job => (
                     <div key={job.id} className="job-card">
                       <h3>{job.title}</h3>
+                      <p><strong>Description:</strong> {job.description}</p>
+                      <p><strong>Summary:</strong> {job.summary || 'Not provided'}</p>
+                      <p><strong>Qualifications:</strong> {job.qualifications || 'Not provided'}</p>
+                      <p><strong>Company:</strong> {job.company}</p>
+                      <p><strong>Location:</strong> {job.location}</p>
+                      <p><strong>Type:</strong> {job.type}</p>
+                      <p><strong>Salary:</strong> {job.salary ? `$${job.salary}` : 'Not specified'}</p>
+                      <p><strong>Requirements:</strong> {job.requirements && job.requirements.length > 0 ? job.requirements.join(', ') : 'None'}</p>
+                      <p><strong>Urgent:</strong> {job.urgent ? 'Yes' : 'No'}</p>
                       <p>Applications: {job.applications ? job.applications.length : 0}</p>
-                      <p>Status: {job.urgent ? '🔥 Urgent' : 'Normal'}</p>
                       <button
                         onClick={() => handleToggleUrgent(job.id, job.urgent)}
                         className="urgent-toggle-btn"
@@ -904,6 +919,16 @@ function Dashboard() {
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="edit-summary">Job Summary</label>
+                <textarea
+                  id="edit-summary"
+                  name="summary"
+                  placeholder="Brief summary of the job"
+                  value={editingJob.summary}
+                  onChange={handleEditFormChange}
+                />
+              </div>
+              <div className="form-group">
                 <label htmlFor="edit-description">Job Description</label>
                 <textarea
                   id="edit-description"
@@ -912,6 +937,16 @@ function Dashboard() {
                   value={editingJob.description}
                   onChange={handleEditFormChange}
                   required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-qualifications">Qualifications</label>
+                <textarea
+                  id="edit-qualifications"
+                  name="qualifications"
+                  placeholder="Required qualifications and skills"
+                  value={editingJob.qualifications}
+                  onChange={handleEditFormChange}
                 />
               </div>
               <div className="form-group">

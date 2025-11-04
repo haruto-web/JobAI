@@ -19,9 +19,13 @@ class UserController extends Controller
             return response()->json(['users' => []]);
         }
 
+        $searchTerm = strtolower($query);
+
         $users = User::with('profile')
-            ->where('name', 'like', '%' . $query . '%')
-            ->orWhere('email', 'like', '%' . $query . '%')
+            ->where(function($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(name) LIKE ?', ['%' . $searchTerm . '%'])
+                  ->orWhereRaw('LOWER(email) LIKE ?', ['%' . $searchTerm . '%']);
+            })
             ->limit(20)
             ->get()
             ->map(function ($user) {

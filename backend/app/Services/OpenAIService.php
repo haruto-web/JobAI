@@ -141,4 +141,35 @@ class OpenAIService
 
         return is_array($suggestions) ? $suggestions : [];
     }
+
+    /**
+     * Generate a response enhanced with web search results
+     */
+    public function generateSearchEnhancedResponse($message, $searchResults, $userType = 'job_seeker')
+    {
+        $searchContext = '';
+        if (!empty($searchResults)) {
+            $searchContext = "Web search results:\n";
+            foreach ($searchResults as $i => $result) {
+                $searchContext .= ($i + 1) . ". " . $result['title'] . "\n";
+                $searchContext .= "   " . $result['snippet'] . "\n";
+                $searchContext .= "   Source: " . $result['link'] . "\n\n";
+            }
+        }
+
+        $systemPrompt = $userType === 'employer'
+            ? "You are an AI assistant for employers on a job recommendation website. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Use the provided web search results to enhance your response when relevant. Be professional, helpful, and focused on employer needs."
+            : "You are an AI career advisor chatbot for a job recommendation website. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Use the provided web search results to enhance your response when relevant. Be friendly, helpful, and professional.";
+
+        $response = $this->client->chat()->create([
+            'model' => 'gpt-3.5-turbo',
+            'messages' => [
+                ['role' => 'system', 'content' => $systemPrompt . "\n\n" . $searchContext],
+                ['role' => 'user', 'content' => $message]
+            ],
+            'max_tokens' => 500,
+        ]);
+
+        return $response->choices[0]->message->content;
+    }
 }

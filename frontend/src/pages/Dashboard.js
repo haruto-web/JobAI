@@ -158,6 +158,8 @@ function Dashboard() {
       setJobForm({
         title: '',
         description: '',
+        summary: '',
+        qualifications: '',
         company: '',
         location: '',
         type: 'full-time',
@@ -481,6 +483,26 @@ function Dashboard() {
                     value={jobForm.description}
                     onChange={handleJobFormChange}
                     required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="summary">Job Summary</label>
+                  <textarea
+                    id="summary"
+                    name="summary"
+                    placeholder="Brief summary of the job"
+                    value={jobForm.summary}
+                    onChange={handleJobFormChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="qualifications">Qualifications</label>
+                  <textarea
+                    id="qualifications"
+                    name="qualifications"
+                    placeholder="Required qualifications and skills"
+                    value={jobForm.qualifications}
+                    onChange={handleJobFormChange}
                   />
                 </div>
                 <div className="form-group">

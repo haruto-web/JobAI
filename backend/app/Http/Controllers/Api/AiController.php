@@ -66,7 +66,10 @@ class AiController extends Controller
             }
 
             // Update user profile with analysis
-            $profile = $user->profile ?? new UserProfile(['user_id' => $user->id]);
+            $profile = $user->profile ?? new UserProfile();
+            if (!$profile->user_id) {
+                $profile->user_id = $user->id;
+            }
             $profile->fill([
                 'skills' => $analysis['skills'] ?? [],
                 'experience_level' => $analysis['experience_level'] ?? 'entry',
@@ -247,109 +250,6 @@ class AiController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $message = $request->input('message');
-
-        // Save user message
-        ChatMessage::create([
-            'user_id' => $user->id,
-            'role' => 'user',
-            'message' => $message,
-        ]);
-
-        // If OpenAI key is not configured, provide a simple fallback response
-        if (!is_string(config('services.openai.api_key')) || trim(config('services.openai.api_key')) === '') {
-            Log::info('OpenAI API key not configured - using simple fallback for chat', ['user_id' => $user->id]);
-
-            $response = $this->generateFallbackResponse($message, $user);
-
-            // Save bot response
-            ChatMessage::create([
-                'user_id' => $user->id,
-                'role' => 'bot',
-                'message' => $response,
-            ]);
-
-            return response()->json(['response' => $response]);
-        }
-
-        try {
-            $openai = new OpenAIService();
-
-            // Build context from user's profile if available
-            $context = '';
-            if ($user->profile) {
-                $profile = $user->profile;
-                $context = "User profile data: ";
-                $context .= "ID: " . ($profile->id ?? '') . ". ";
-                $context .= "Bio: " . ($profile->bio ?? '') . ". ";
-                $context .= "Skills: " . (is_array($profile->skills) ? implode(', ', $profile->skills) : ($profile->skills ?? '')) . ". ";
-                $context .= "Experience level: " . ($profile->experience_level ?? '') . ". ";
-                $context .= "Education attainment: " . ($profile->education_attainment ?? '') . ". ";
-                $context .= "Portfolio URL: " . ($profile->portfolio_url ?? '') . ". ";
-                $context .= "Resume URL: " . ($profile->resume_url ?? '') . ". ";
-                $context .= "Resumes: " . (is_array($profile->resumes) ? json_encode($profile->resumes) : ($profile->resumes ?? '')) . ". ";
-                $context .= "AI analysis: " . (is_array($profile->ai_analysis) ? json_encode($profile->ai_analysis) : ($profile->ai_analysis ?? '')) . ". ";
-                $context .= "Extracted experience: " . ($profile->extracted_experience ?? '') . ". ";
-                $context .= "Extracted education: " . ($profile->extracted_education ?? '') . ". ";
-                $context .= "Extracted certifications: " . ($profile->extracted_certifications ?? '') . ". ";
-                $context .= "Extracted languages: " . ($profile->extracted_languages ?? '') . ". ";
-                $context .= "Resume summary: " . ($profile->resume_summary ?? '') . ". ";
-                $context .= "Last AI analysis: " . ($profile->last_ai_analysis ?? '') . ". ";
-            }
-
-            $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Common topics include: finding jobs by location/skill/type, applying for jobs, uploading resumes, cover letter tips, company details, interview preparation, application status, and career improvement. Be friendly, helpful, and professional. Use the provided context about the user when relevant. If asked about specific jobs, reference available job listings. Provide actionable advice and keep responses concise but informative. Always encourage next steps and offer to help further.";
-
-            // Fetch recent chat history
-            $chatHistory = ChatMessage::where('user_id', $user->id)
-                ->orderBy('created_at', 'desc')
-                ->limit(5) // Get last 5 messages for context
-                ->get()
-                ->reverse(); // Reverse to get chronological order
-
-            $messagesForOpenAI = [['role' => 'system', 'content' => $systemPrompt . ' ' . $context]];
-
-            foreach ($chatHistory as $chatMessage) {
-                $messagesForOpenAI[] = [
-                    'role' => $chatMessage->role,
-                    'content' => $chatMessage->message
-                ];
-            }
-
-            // Add the current user message
-            $messagesForOpenAI[] = ['role' => 'user', 'content' => $message];
-
-            $response = $openai->getClient()->chat()->create([
-                'model' => 'gpt-3.5-turbo',
-                'messages' => $messagesForOpenAI,
-                'max_tokens' => 500,
-            ]);
-
-            $aiResponse = $response->choices[0]->message->content;
-
-            // Save bot response
-            ChatMessage::create([
-                'user_id' => $user->id,
-                'role' => 'bot',
-                'message' => $aiResponse,
-            ]);
-
-            return response()->json(['response' => $aiResponse]);
-        } catch (\Throwable $e) {
-            Log::error('AI chat failed', ['error' => $e->getMessage()]);
-
-            // Fallback response
-            $response = $this->generateFallbackResponse($message, $user);
-
-            // Save bot response
-            ChatMessage::create([
-                'user_id' => $user->id,
-                'role' => 'bot',
-                'message' => $response,
-            ]);
-
-            return response()->json(['response' => $response]);
-        }
-    }
 
 
 

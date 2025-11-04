@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
 import './Navigation.css';
 
-function Navigation({ isLoggedIn, onLogin, onRegister, onLogout, userType }) {
+function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false); // New state for admin dropdown
   const location = useLocation();

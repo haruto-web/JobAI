@@ -85,7 +85,17 @@ function App() {
         });
         setUser(response.data);
         setIsLoggedIn(true);
-      } catch {
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          console.error('Unauthorized access - redirecting to login');
+          setIsLoggedIn(false);
+          setUser(null);
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        } else {
+          console.error('Error fetching user data:', error);
+        }
         setIsLoggedIn(false);
         setUser(null);
       } finally {

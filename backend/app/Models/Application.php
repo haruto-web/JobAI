@@ -25,6 +25,7 @@ class Application extends Model
         'status',
         'cover_letter',
         'resume_path',
+        'cancel_reason',
     ];
 
     protected $casts = [

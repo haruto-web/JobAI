@@ -1,0 +1,140 @@
+.job-details-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.job-details-header {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+}
+
+.back-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.back-button:hover {
+  background: #0056b3;
+}
+
+.job-details-header h1 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.job-meta {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  color: #666;
+}
+
+.job-meta span {
+  padding: 4px 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.salary {
+  background: #28a745;
+  color: white;
+}
+
+.job-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.job-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.job-section h2 {
+  margin: 0 0 15px 0;
+  color: #333;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 5px;
+}
+
+.job-section p {
+  line-height: 1.6;
+  color: #555;
+  margin: 0;
+}
+
+.job-section ul {
+  padding-left: 20px;
+}
+
+.job-section li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.job-apply-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid #007bff;
+}
+
+.job-apply-section h2 {
+  margin: 0 0 15px 0;
+  color: #007bff;
+}
+
+.apply-form {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.resume-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.apply-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.apply-button:hover:not(:disabled) {
+  background: #218838;
+}
+
+.apply-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.job-details-loading,
+.job-details-error {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+}
+
+.job-details-error {
+  color: #dc3545;
+}

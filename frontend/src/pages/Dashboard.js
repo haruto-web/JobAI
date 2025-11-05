@@ -29,6 +29,9 @@ function Dashboard() {
   const [showMoneyForm, setShowMoneyForm] = useState(false);
   const [processingMoney, setProcessingMoney] = useState(false);
   const [moneyAction, setMoneyAction] = useState('');
+  const [cancelForm, setCancelForm] = useState({ applicationId: null, reason: '' });
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingApplication, setCancellingApplication] = useState(false);
 
   // Resume upload for accepted jobs
   const [selectedFile, setSelectedFile] = useState(null);
@@ -257,6 +260,29 @@ function Dashboard() {
     }
   };
 
+  const handleCancelApplication = async () => {
+    if (!cancelForm.reason.trim()) return;
+
+    setCancellingApplication(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/applications/${cancelForm.applicationId}/cancel`, {
+        cancel_reason: cancelForm.reason
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Application cancelled successfully!');
+      setCancelForm({ applicationId: null, reason: '' });
+      setShowCancelModal(false);
+      fetchDashboard(); // Refresh dashboard data
+    } catch (error) {
+      console.error('Failed to cancel application:', error);
+      alert('Failed to cancel application. Please try again.');
+    } finally {
+      setCancellingApplication(false);
+    }
+  };
+
 
 
   if (loading) {
@@ -297,6 +323,17 @@ function Dashboard() {
                         <p>Location: {app.job.location}</p>
                         <p>Status: <span className={`status-${app.status}`}>{app.status}</span></p>
                         <p>Applied on: {new Date(app.created_at).toLocaleDateString()}</p>
+                        {app.status === 'pending' && (
+                          <button
+                            className="action-btn cancel"
+                            onClick={() => {
+                              setCancelForm({ applicationId: app.id, reason: '' });
+                              setShowCancelModal(true);
+                            }}
+                          >
+                            ❌ Cancel Application
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1015,6 +1052,40 @@ function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Application Modal */}
+      {showCancelModal && (
+        <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Cancel Application</h3>
+            <div className="form-group">
+              <label htmlFor="cancel-reason">Reason for Cancellation</label>
+              <textarea
+                id="cancel-reason"
+                placeholder="Please provide a reason for cancelling this application"
+                value={cancelForm.reason}
+                onChange={(e) => setCancelForm({ ...cancelForm, reason: e.target.value })}
+                required
+              />
+            </div>
+            <div className="modal-actions">
+              <button
+                className="cancel-btn"
+                onClick={() => setShowCancelModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="submit-btn"
+                onClick={() => handleCancelApplication()}
+                disabled={cancellingApplication || !cancelForm.reason.trim()}
+              >
+                {cancellingApplication ? 'Cancelling...' : 'Cancel Application'}
+              </button>
+            </div>
           </div>
         </div>
       )}

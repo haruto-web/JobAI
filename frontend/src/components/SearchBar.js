@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './SearchBar.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 function SearchBar() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [searchType, setSearchType] = useState('jobs');
   const [results, setResults] = useState([]);
@@ -67,7 +69,18 @@ function SearchBar() {
           <h3>Search Results ({results.length})</h3>
           <div className="results-list">
             {results.map((item, index) => (
-              <div key={index} className="result-item">
+              <div
+                key={index}
+                className="result-item"
+                onClick={() => {
+                  if (searchType === 'jobs') {
+                    navigate(`/job/${item.id}`);
+                  } else {
+                    navigate(`/user/${item.id}`);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 {searchType === 'jobs' ? (
                   <>
                     <h4>{item.title}</h4>

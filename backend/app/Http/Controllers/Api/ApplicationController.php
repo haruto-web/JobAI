@@ -162,6 +162,55 @@ class ApplicationController extends Controller
         return response()->json($application->load(['user', 'job']));
     }
 
+    public function cancel(Request $request, $id)
+    {
+        $application = Application::find($id);
+        if (!$application) {
+            return response()->json(['message' => 'Application not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user = Auth::user();
+
+        // Only jobseekers can cancel their own applications
+        if ($user->user_type !== 'jobseeker' || $application->user_id !== $user->id) {
+            return response()->json(['message' => 'You can only cancel your own applications'], Response::HTTP_FORBIDDEN);
+        }
+
+        // Only pending applications can be cancelled
+        if ($application->status !== 'pending') {
+            return response()->json(['message' => 'Only pending applications can be cancelled'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:1000',
+        ]);
+
+        $application->update([
+            'status' => 'cancelled',
+            'cancel_reason' => $validated['cancel_reason'],
+        ]);
+
+        // Send notification to employer
+        $jobOwner = $application->job->user;
+        if ($jobOwner) {
+            Notification::create([
+                'user_id' => $jobOwner->id,
+                'type' => 'application_cancelled',
+                'title' => '❌ Application Cancelled',
+                'message' => $user->name . ' has cancelled their application for "' . $application->job->title . '". Reason: ' . $validated['cancel_reason'],
+                'data' => [
+                    'application_id' => $application->id,
+                    'job_id' => $application->job->id,
+                    'job_title' => $application->job->title,
+                    'applicant_name' => $user->name,
+                    'cancel_reason' => $validated['cancel_reason']
+                ]
+            ]);
+        }
+
+        return response()->json($application->load(['user', 'job']));
+    }
+
     public function destroy($id)
     {
         $application = Application::find($id);

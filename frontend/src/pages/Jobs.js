@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchBar from '../components/SearchBar';
 import './Jobs.css';
@@ -6,6 +7,7 @@ import './Jobs.css';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 function Jobs() {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null);
@@ -286,7 +288,12 @@ function Jobs() {
 
           <div className="job-cards">
             {jobs.length > 0 ? jobs.map(job => (
-              <div key={job.id} className="job-card">
+              <div
+                key={job.id}
+                className="job-card"
+                onClick={() => navigate(`/job/${job.id}`)}
+                style={{ cursor: 'pointer' }}
+              >
                 <h3>{job.title}</h3>
                 <p>{job.company} - {job.location} - {job.type}</p>
                 {job.salary && <p>Salary: ${job.salary}</p>}
@@ -300,7 +307,10 @@ function Jobs() {
                       style={{ marginBottom: '5px', width: '100%' }}
                     />
                     <button
-                      onClick={() => handleApply(job.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent navigation when clicking apply
+                        handleApply(job.id);
+                      }}
                       disabled={applying === job.id || !selectedFile}
                       className="apply-btn"
                     >
@@ -322,7 +332,12 @@ function Jobs() {
             <div className="job-cards">
               {jobs.filter(job => job.match_score && job.match_score > 0).length > 0 ? (
                 jobs.filter(job => job.match_score && job.match_score > 0).map(job => (
-                  <div key={job.id} className="job-card">
+                  <div
+                    key={job.id}
+                    className="job-card"
+                    onClick={() => navigate(`/job/${job.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <h3>{job.title}</h3>
                     <p>{job.company} - {job.location} - {job.type}</p>
                     {job.salary && <p>Salary: ${job.salary}</p>}
@@ -337,7 +352,10 @@ function Jobs() {
                         style={{ marginBottom: '5px', width: '100%' }}
                       />
                       <button
-                        onClick={() => handleApply(job.id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent navigation when clicking apply
+                          handleApply(job.id);
+                        }}
                         disabled={applying === job.id || !selectedFile}
                         className="apply-btn"
                       >

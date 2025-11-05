@@ -8,6 +8,8 @@ import Register from './components/Register';
 import Home from './pages/Home';
 import About from './pages/About';
 import Jobs from './pages/Jobs';
+import JobDetails from './pages/JobDetails';
+import UserProfile from './pages/UserProfile';
 import Account from './pages/Account';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -130,6 +132,8 @@ function App() {
           <Route path="/login" element={isLoggedIn ? <Navigate to={user?.user_type === 'admin' ? '/admin' : '/dashboard'} /> : <Login onLogin={handleLogin} />} />
           <Route path="/register" element={isLoggedIn ? <Navigate to={user?.user_type === 'admin' ? '/admin' : '/dashboard'} /> : <Register onRegister={handleRegister} />} />
           <Route path="/jobs" element={isLoggedIn && user?.user_type !== 'admin' ? <Jobs /> : <Navigate to="/login" />} />
+          <Route path="/job/:id" element={isLoggedIn && user?.user_type !== 'admin' ? <JobDetails /> : <Navigate to="/login" />} />
+          <Route path="/user/:id" element={isLoggedIn && user?.user_type !== 'admin' ? <UserProfile /> : <Navigate to="/login" />} />
           <Route path="/account" element={isLoggedIn ? <Account isLoggedIn={isLoggedIn} /> : <Navigate to="/login" />} />
           <Route path="/dashboard" element={isLoggedIn && user?.user_type !== 'admin' ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/admin" element={isLoggedIn && user?.user_type === 'admin' ? <AdminDashboard /> : <Navigate to="/login" />} />

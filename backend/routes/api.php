@@ -14,8 +14,8 @@ Route::post('resend-verification-email', [AuthController::class, 'resendVerifica
 Route::post('send-password-reset', [AuthController::class, 'sendPasswordReset']);
 Route::post('reset-password', [AuthController::class, 'resetPassword']);
 Route::get('jobs', [JobController::class, 'index']);
-Route::get('jobs/{id}', [JobController::class, 'show']);
 Route::get('jobs/search', [JobController::class, 'search']);
+Route::get('jobs/{id}', [JobController::class, 'show']);
 Route::get('urgent-jobs', [JobController::class, 'urgentJobs']);
 Route::get('users/search', [UserController::class, 'search']);
 

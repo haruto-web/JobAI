@@ -154,8 +154,15 @@ class JobController extends Controller
 
         $searchTerm = strtolower($query);
 
+        // Normalize common job type variations
+        $normalizedTerm = str_replace(
+            ['fulltime', 'partime', 'freelance'],
+            ['full-time', 'part-time', 'contract'],
+            $searchTerm
+        );
+
         $jobs = Job::where('status', 'published')
-            ->where(function($q) use ($searchTerm) {
+            ->where(function($q) use ($searchTerm, $normalizedTerm) {
                 $q->whereRaw('LOWER(title) LIKE ?', ['%' . $searchTerm . '%'])
                   ->orWhereRaw('LOWER(description) LIKE ?', ['%' . $searchTerm . '%'])
                   ->orWhereRaw('LOWER(summary) LIKE ?', ['%' . $searchTerm . '%'])
@@ -163,7 +170,9 @@ class JobController extends Controller
                   ->orWhereRaw('LOWER(company) LIKE ?', ['%' . $searchTerm . '%'])
                   ->orWhereRaw('LOWER(location) LIKE ?', ['%' . $searchTerm . '%'])
                   ->orWhereRaw('LOWER(type) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('CAST(salary AS CHAR) LIKE ?', ['%' . $searchTerm . '%']);
+                  ->orWhereRaw('CAST(salary AS CHAR) LIKE ?', ['%' . $searchTerm . '%'])
+                  // Also search with normalized term for job types
+                  ->orWhereRaw('LOWER(type) LIKE ?', ['%' . $normalizedTerm . '%']);
             })
             ->limit(20)
             ->get();

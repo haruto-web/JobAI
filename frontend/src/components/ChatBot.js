@@ -274,6 +274,10 @@ function ChatBot({ isOpen, onToggle }) {
 
       if (action === 'approve') {
         setJobDraft(null);
+        // Dispatch custom event to notify job list refresh
+        window.dispatchEvent(new CustomEvent('jobCreated'));
+        // Redirect to jobs page to show the newly created job
+        window.location.href = '/jobs';
       } else if (action === 'cancel') {
         setJobDraft(null);
       } else if (action === 'edit' && response.data.job_draft) {
@@ -389,7 +393,13 @@ function ChatBot({ isOpen, onToggle }) {
         {userType === 'employer' && (
           <div className="chatbot-job-creation">
             <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-              Try saying: "Create a job: Title, Company, Location, Job-tyle, Salary"
+              Try saying: 
+              "Create a job: Job Title, Company, Location, Salary" 
+              
+      
+            </p>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+              “Once you’ve created a job, you can update details like the title, description, and salary anytime in your dashboard.”
             </p>
             {jobDraft && (
               <div className="job-draft">

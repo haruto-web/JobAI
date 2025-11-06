@@ -30,18 +30,18 @@ function Jobs() {
   });
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/jobs`);
-        setJobs(response.data);
-      } catch (error) {
-        console.error('Failed to fetch jobs:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchJobs = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/jobs`);
+      setJobs(response.data);
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -58,6 +58,18 @@ function Jobs() {
 
     fetchJobs();
     fetchUser();
+
+    // Listen for job creation event
+    const handleJobCreated = () => {
+      fetchJobs();
+    };
+
+    window.addEventListener('jobCreated', handleJobCreated);
+
+    // Cleanup event listener
+    return () => {
+      window.removeEventListener('jobCreated', handleJobCreated);
+    };
   }, []);
 
   const handleApply = async (jobId) => {

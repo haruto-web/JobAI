@@ -12,6 +12,7 @@ use App\Models\ChatMessage;
 use App\Models\UserProfile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class AiController extends Controller
 {
@@ -263,9 +264,15 @@ class AiController extends Controller
         // Check if user is employer and has ongoing job creation session
         if ($user->user_type === 'employer') {
             $sessionKey = "job_creation_{$user->id}";
-            $jobDraft = session($sessionKey, []);
+            $jobDraft = Cache::get($sessionKey, []);
             if (!empty($jobDraft)) {
-                return $this->processJobCreationStep($message, $user, $jobDraft, $sessionKey);
+                // Check if session has expired (10 minutes)
+                if (isset($jobDraft['started_at']) && now()->diffInMinutes($jobDraft['started_at']) > 10) {
+                    Cache::forget($sessionKey);
+                    $jobDraft = [];
+                } else {
+                    return $this->processJobCreationStep($message, $user, $jobDraft, $sessionKey);
+                }
             }
         }
 
@@ -503,12 +510,40 @@ class AiController extends Controller
     }
 
     private function isJobCreationRequest($message)
-    {
-        $messageLower = strtolower($message);
-        return str_contains($messageLower, 'create job for me') ||
-               str_contains($messageLower, 'create a job') ||
-               str_contains($messageLower, 'generate job') ||
-               str_contains($messageLower, 'make a job posting');
+{
+    $messageLower = strtolower($message);
+    $triggers = [
+        // Direct phrases
+        'create job', 'create a job', 'create job for me', 'create a job post',
+        'create a job posting', 'create a job listing', 'make a job post',
+        'make a job', 'make job posting', 'generate job', 'generate a job post',
+        'generate a job listing', 'post a job', 'post new job', 'add a job',
+        'add job posting', 'add new job',
+
+        // Conversational or indirect phrases
+        'help me create a job', 'i want to create a job', 'i need to post a job',
+        'can you create a job for me', 'can you make a job posting',
+        'please create a job post', 'i want to post a job',
+        'i want to add a job posting', 'help me make a job post',
+        'let’s make a job post', 'i need to hire someone', 'i want to hire someone',
+        'create a new job for hiring', 'can you help me post a job',
+        'i’d like to post a job', 'start a new job post', 'publish a job',
+
+        // Short command style
+        'new job', 'new job post', 'job post', 'job posting', 'post job',
+        'add job', 'hiring post',
+
+        // Contextual or job-type specific
+        'create a job for', 'generate job ad for', 'create job description for',
+    ];
+
+        foreach ($triggers as $trigger) {
+            if (str_contains($messageLower, $trigger)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function handleJobCreation($message, $user)
@@ -523,17 +558,18 @@ class AiController extends Controller
 
         // Check if user already has a job creation session in progress
         $sessionKey = "job_creation_{$user->id}";
-        $jobDraft = session($sessionKey, []);
+        $jobDraft = Cache::get($sessionKey, []);
 
         // If no session exists, start new job creation flow
         if (empty($jobDraft)) {
             $jobDraft = [
                 'step' => 'title',
-                'data' => []
+                'data' => [],
+                'started_at' => now()
             ];
-            session([$sessionKey => $jobDraft]);
+            Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
 
-            $response = "Great! Let's create a job posting together. First, what's the job title? (e.g., Software Developer, Marketing Manager)";
+            $response = "Great! Let's create a job posting together. First, what's the job title? (e.g., Software Developer, Marketing Manager, Teacher, etc.)";
 
             // Save bot response
             ChatMessage::create([
@@ -551,6 +587,27 @@ class AiController extends Controller
 
     private function processJobCreationStep($message, $user, $jobDraft, $sessionKey)
     {
+        // If user wants to create a new job, restart the session
+        if ($this->isJobCreationRequest($message)) {
+            $jobDraft = [
+                'step' => 'title',
+                'data' => [],
+                'started_at' => now()
+            ];
+            Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
+
+            $response = "Great! Let's create a job posting together. First, what's the job title? (e.g., Software Developer, Marketing Manager, Teacher, etc.)";
+
+            // Save bot response
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+
+            return response()->json(['response' => $response]);
+        }
+
         $currentStep = $jobDraft['step'];
         $data = $jobDraft['data'];
 
@@ -559,17 +616,15 @@ class AiController extends Controller
                 $data['title'] = trim($message);
                 $jobDraft['step'] = 'location';
                 $jobDraft['data'] = $data;
-                session([$sessionKey => $jobDraft]);
-
-                $response = "Got it! Job title: {$data['title']}\n\nNext, where is this position located? (e.g., New York, Remote, San Francisco)";
-
+                Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
+                $response = "Got it! Job title: {$data['title']}\n\nNext, where is this position located? (e.g., Metro Manila, Makati City, Quezon City, Remote)";
                 break;
 
             case 'location':
                 $data['location'] = trim($message);
                 $jobDraft['step'] = 'type';
                 $jobDraft['data'] = $data;
-                session([$sessionKey => $jobDraft]);
+                Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
 
                 $response = "Location set to: {$data['location']}\n\nWhat type of employment is this? (Full-time, Part-time, Contract, Freelance)";
 
@@ -585,7 +640,7 @@ class AiController extends Controller
                 $data['type'] = $type;
                 $jobDraft['step'] = 'summary';
                 $jobDraft['data'] = $data;
-                session([$sessionKey => $jobDraft]);
+                Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
 
                 $response = "Job type: {$data['type']}\n\nNow, provide a brief job summary (1-2 sentences describing the role).";
 
@@ -595,7 +650,7 @@ class AiController extends Controller
                 $data['summary'] = trim($message);
                 $jobDraft['step'] = 'description';
                 $jobDraft['data'] = $data;
-                session([$sessionKey => $jobDraft]);
+                Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
 
                 $response = "Summary added!\n\nPlease provide a detailed job description including duties and responsibilities.";
 
@@ -605,7 +660,7 @@ class AiController extends Controller
                 $data['description'] = trim($message);
                 $jobDraft['step'] = 'salary';
                 $jobDraft['data'] = $data;
-                session([$sessionKey => $jobDraft]);
+                Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
 
                 $response = "Description added!\n\nWhat's the salary range or compensation? (e.g., $50,000 - $80,000, Competitive, DOE - Daily Rate)";
 
@@ -615,7 +670,7 @@ class AiController extends Controller
                 $data['salary'] = trim($message);
                 $jobDraft['step'] = 'review';
                 $jobDraft['data'] = $data;
-                session([$sessionKey => $jobDraft]);
+                Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
 
                 $response = $this->generateJobDraftPreview($data);
 
@@ -627,11 +682,18 @@ class AiController extends Controller
                     return $this->finalizeJobPosting($user, $data, $sessionKey);
                 } elseif (str_contains($messageLower, 'edit') || str_contains($messageLower, 'change')) {
                     $jobDraft['step'] = 'edit_choice';
-                    session([$sessionKey => $jobDraft]);
+                    Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
                     $response = "Which part would you like to edit? Reply with: title, location, type, summary, description, or salary.";
-                } elseif (str_contains($messageLower, 'cancel')) {
-                    session()->forget($sessionKey);
-                    $response = "Job creation cancelled. Let me know if you'd like to start over!";
+                } elseif (str_contains($messageLower, 'cancel job') || str_contains($messageLower, 'stop') || str_contains($messageLower, 'stop creating job') || str_contains($messageLower, 'cancel creating job')) {
+                    Cache::forget($sessionKey);
+                    // Start over with new job creation
+                    $jobDraft = [
+                        'step' => 'title',
+                        'data' => [],
+                        'started_at' => now()
+                    ];
+                    Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
+                    $response = "Job creation cancelled. Let's start over!\n\nWhat's the job title? (e.g., Software Developer, Marketing Manager, Teacher, etc.)";
                 } else {
                     $response = "Please choose: 'Approve and post', 'Edit', or 'Cancel'.";
                 }
@@ -645,7 +707,7 @@ class AiController extends Controller
                     break;
                 }
                 $jobDraft['step'] = 'editing_' . $field;
-                session([$sessionKey => $jobDraft]);
+                Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
                 $response = "Current {$field}: " . ($data[$field] ?? 'Not set') . "\n\nWhat's the new {$field}?";
 
                 break;
@@ -657,7 +719,7 @@ class AiController extends Controller
                     $data[$field] = trim($message);
                     $jobDraft['step'] = 'review';
                     $jobDraft['data'] = $data;
-                    session([$sessionKey => $jobDraft]);
+                    Cache::put($sessionKey, $jobDraft, 600); // 10 minutes
                     $response = "Updated! Here's the revised draft:\n\n" . $this->generateJobDraftPreview($data);
                 } else {
                     $response = "I'm not sure what you mean. Let's continue with the job creation.";
@@ -707,7 +769,7 @@ class AiController extends Controller
             ]);
 
             // Clear the session
-            session()->forget($sessionKey);
+            Cache::forget($sessionKey);
 
             $response = "🎉 Job posted successfully! Your job '{$data['title']}' is now live and visible to job seekers.\n\n";
             $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
@@ -742,6 +804,26 @@ class AiController extends Controller
         $details = [];
         $messageLower = strtolower($message);
 
+        // Handle comma-separated format like "create a job: teacher, deped, remote, 1000"
+        if (preg_match('/(?:job|position|role)(?:\s+of)?[\s:]+(.+)/i', $message, $matches)) {
+            $parts = array_map('trim', explode(',', $matches[1]));
+            if (count($parts) >= 4) {
+                $details['job'] = $parts[0];
+                $details['company'] = $parts[1];
+                $details['location'] = $parts[2];
+                $details['salary'] = $parts[3];
+                // If more parts, check for type
+                if (count($parts) > 4) {
+                    $type = strtolower($parts[4]);
+                    if (in_array($type, ['full-time', 'part-time', 'contract', 'freelance'])) {
+                        $details['type'] = $type;
+                    }
+                }
+                return $details; // Return early if parsed successfully
+            }
+        }
+
+        // Fallback to individual regex patterns
         // Extract job title - handle "create a job:" or similar patterns
         if (preg_match('/(?:job|position|role)(?:\s+of)?[\s:]+([^,\n]+)/i', $message, $matches)) {
             $details['job'] = trim($matches[1]);
@@ -870,34 +952,4 @@ class AiController extends Controller
         }
     }
 
-    private function generateFallbackJob($details)
-    {
-        $job = "**Job Posting**\n\n";
-
-        $job .= "**Job Title:** " . ($details['job'] ?? 'Software Developer') . "\n";
-        $job .= "**Company:** " . ($details['company'] ?? 'Tech Company') . "\n";
-        $job .= "**Location:** " . ($details['location'] ?? 'Remote') . "\n";
-        $job .= "**Job Type:** " . ($details['type'] ?? 'Full-time') . "\n";
-        $job .= "**Salary:** " . ($details['salary'] ?? '$50,000 - $80,000 per year') . "\n\n";
-
-        $job .= "**Job Description:**\n";
-        $job .= "We are looking for a talented professional to join our team. This role offers an exciting opportunity to work on innovative projects and contribute to our company's growth.\n\n";
-
-        $job .= "**Requirements:**\n";
-        $job .= "- Relevant experience in the field\n";
-        $job .= "- Strong communication skills\n";
-        $job .= "- Ability to work in a team environment\n";
-        $job .= "- Problem-solving abilities\n\n";
-
-        $job .= "**Benefits:**\n";
-        $job .= "- Competitive salary\n";
-        $job .= "- Health insurance\n";
-        $job .= "- Paid time off\n";
-        $job .= "- Professional development opportunities\n\n";
-
-        $job .= "**How to Apply:**\n";
-        $job .= "Please submit your resume and cover letter through our website. We look forward to hearing from you!";
-
-        return $job;
-    }
 }

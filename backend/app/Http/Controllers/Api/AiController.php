@@ -440,6 +440,7 @@ class AiController extends Controller
                     $confidence = $matchCount > 0 ? min(100, (int) floor(($matchCount / max(1, count($skillsLower))) * 100)) : 0;
                     if ($confidence > 0) {
                         $scored[] = [
+                            'job_id' => $job->id,
                             'title' => $job->title,
                             'description' => strlen($job->description ?? '') > 100 ? substr($job->description, 0, 97) . '...' : ($job->description ?? ''),
                             'confidence' => $confidence,
@@ -451,7 +452,7 @@ class AiController extends Controller
                 if (!empty($suggestions)) {
                     $response = "Based on your skills (" . implode(', ', $skills) . "), here are some job suggestions:\n\n";
                     foreach ($suggestions as $job) {
-                        $response .= "• " . $job['title'] . " (Match: " . $job['confidence'] . "%)\n  " . $job['description'] . "\n\n";
+                        $response .= "• <a href=\"/job/" . $job['job_id'] . "\">" . $job['title'] . "</a> (Match: " . $job['confidence'] . "%)\n  " . $job['description'] . "\n\n";
                     }
                     $response .= "Would you like me to help you apply to any of these jobs or provide more details?";
                     return $response;

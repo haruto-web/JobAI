@@ -18,6 +18,7 @@ Route::get('jobs/search', [JobController::class, 'search']);
 Route::get('jobs/{id}', [JobController::class, 'show']);
 Route::get('urgent-jobs', [JobController::class, 'urgentJobs']);
 Route::get('users/search', [UserController::class, 'search']);
+Route::get('users/{id}', [UserController::class, 'show']);
 
 // Google OAuth (use web-style redirect flow but exposed under /api for frontend)
 use App\Http\Controllers\Auth\GoogleController as SocialGoogleController;

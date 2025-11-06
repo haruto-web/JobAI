@@ -45,6 +45,17 @@ class UserController extends Controller
         return response()->json(['users' => $users]);
     }
 
+    public function show($id)
+    {
+        $user = User::with('profile')->find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        return response()->json($user);
+    }
+
     public function uploadResumeForJob(Request $request)
     {
         $validated = $request->validate([

@@ -154,7 +154,7 @@ function ChatBot({ isOpen, onToggle }) {
         botResponse = 'I couldn\'t find any matches for your skills in our current job listings. Here are some general recommendations:\n\n1. Consider expanding your skill set with related technologies\n2. Look for entry-level positions in your field\n3. Check back later as new jobs are posted regularly\n\nTry searching our job listings page for more options!';
       } else {
         suggestions.forEach((job, index) => {
-          botResponse += `${index + 1}. ${job.title}\n   ${job.description}\n   Match: ${job.confidence}%\n\n`;
+          botResponse += `${index + 1}. <a href="/job/${job.job_id}">${job.title}</a>\n   ${job.description}\n   Match: ${job.confidence}%\n\n`;
         });
         botResponse += 'Would you like me to help you apply to any of these jobs or provide more details?';
       }
@@ -213,7 +213,7 @@ function ChatBot({ isOpen, onToggle }) {
         botResponse += 'I couldn\'t find any matches for your resume in our current job listings. Here are some general recommendations:\n\n1. Consider expanding your skill set with related technologies\n2. Look for entry-level positions in your field\n3. Check back later as new jobs are posted regularly\n\nTry searching our job listings page for more options!';
       } else {
         suggestions.forEach((job, index) => {
-          botResponse += `${index + 1}. ${job.title}\n   ${job.description}\n   Match: ${job.confidence || job.match_score || 'N/A'}%\n\n`;
+          botResponse += `${index + 1}. <a href="/job/${job.job_id}">${job.title}</a>\n   ${job.description}\n   Match: ${job.confidence || job.match_score || 'N/A'}%\n\n`;
         });
         botResponse += 'Would you like me to help you apply to any of these jobs or provide more details?';
       }

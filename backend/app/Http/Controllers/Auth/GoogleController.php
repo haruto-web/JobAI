@@ -17,10 +17,15 @@ class GoogleController extends Controller
         /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
         $driver = Socialite::driver('google');
 
+        // Force the redirect URL to the backend callback route so Google returns
+        // to the server (not the frontend) regardless of environment config.
+        // Use Laravel's url() helper which respects APP_URL.
+        $callbackUrl = url('/auth/google/callback');
+
         // stateless() is available on the two-provider implementation. Annotating the
         // $driver variable above helps static analyzers (intelephense) understand
         // the available methods and prevents false-positive "undefined method" warnings.
-        return $driver->stateless()->redirect();
+        return $driver->stateless()->redirectUrl($callbackUrl)->redirect();
     }
 
     // Handle callback
@@ -29,22 +34,26 @@ class GoogleController extends Controller
         try {
             /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
             $driver = Socialite::driver('google');
-            $googleUser = $driver->stateless()->user();
 
-            $user = User::updateOrCreate(
-                ['email' => $googleUser->getEmail()],
-                [
-                    'name' => $googleUser->getName(),
-                    'google_id' => $googleUser->getId(),
-                    'password' => Hash::make(Str::random(16)), // ✅ fixed Hash import
-                ]
-            );
+            // Ensure the provider uses the backend callback URL when retrieving
+            // the user information (this prevents mismatched redirect URIs).
+            $callbackUrl = url('/auth/google/callback');
+            $googleUser = $driver->stateless()->redirectUrl($callbackUrl)->user();
 
-            // Generate Sanctum token
-            $token = $user->createToken('google-login')->plainTextToken;
+            $user = User::where('email', $googleUser->getEmail())->first();
 
-            // Redirect back to frontend with token
-            return redirect("http://localhost:3000/dashboard?token=$token");
+            if ($user) {
+                // User exists, log in
+                $token = $user->createToken('google-login')->plainTextToken;
+                // Redirect to frontend oauth completion page which will postMessage back to opener or handle direct redirect
+                return redirect("http://localhost:3000/oauth/complete?token=$token");
+            } else {
+                // User does not exist, redirect to frontend oauth completion page with profile details
+                $email = urlencode($googleUser->getEmail());
+                $name = urlencode($googleUser->getName());
+                $avatar = urlencode($googleUser->getAvatar());
+                return redirect("http://localhost:3000/oauth/complete?email={$email}&name={$name}&avatar={$avatar}&provider=google");
+            }
 
         } catch (\Exception $e) {
             return redirect("http://localhost:3000/login?error=google_auth_failed");

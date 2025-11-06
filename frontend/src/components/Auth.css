@@ -292,6 +292,48 @@
   margin-top: 15px;
 }
 
+/* OAuth / Google button styles */
+.oauth-buttons {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.auth-button.oauth.google {
+  background: #fff !important;
+  color: #202124 !important;
+  border: 1px solid #e6e6e6 !important;
+  padding: 12px 18px !important;
+  border-radius: 999px !important;
+  width: 100%;
+  max-width: 520px;
+  justify-content: center !important;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.auth-button.oauth.google:hover:not(:disabled) {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(32,33,36,0.08);
+}
+
+.auth-button.oauth.google .google-logo {
+  position: absolute;
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.auth-button.oauth.google .google-logo svg {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-button.oauth.google .google-text {
+  font-weight: 600;
+  font-size: 15px;
+}
+
 .link-button {
   background: none;
   border: none;

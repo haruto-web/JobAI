@@ -40,6 +40,7 @@ function SearchBar() {
     <div className="search-bar-container">
       <div className="search-bar">
         <select
+          name="searchType"
           value={searchType}
           onChange={(e) => setSearchType(e.target.value)}
           className="search-type-select"
@@ -49,6 +50,7 @@ function SearchBar() {
         </select>
         <input
           type="text"
+          name="query"
           placeholder={`Search ${searchType}...`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}

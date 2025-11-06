@@ -5,6 +5,7 @@ import Navigation from './components/Navigation';
 import Loading from './components/Loading';
 import Login from './components/Login';
 import Register from './components/Register';
+import OAuthCallback from './components/OAuthCallback';
 import Home from './pages/Home';
 import About from './pages/About';
 import Jobs from './pages/Jobs';
@@ -131,6 +132,7 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/login" element={isLoggedIn ? <Navigate to={user?.user_type === 'admin' ? '/admin' : '/dashboard'} /> : <Login onLogin={handleLogin} />} />
           <Route path="/register" element={isLoggedIn ? <Navigate to={user?.user_type === 'admin' ? '/admin' : '/dashboard'} /> : <Register onRegister={handleRegister} />} />
+          <Route path="/oauth/complete" element={<OAuthCallback />} />
           <Route path="/jobs" element={isLoggedIn && user?.user_type !== 'admin' ? <Jobs /> : <Navigate to="/login" />} />
           <Route path="/job/:id" element={isLoggedIn && user?.user_type !== 'admin' ? <JobDetails /> : <Navigate to="/login" />} />
           <Route path="/user/:id" element={isLoggedIn && user?.user_type !== 'admin' ? <UserProfile /> : <Navigate to="/login" />} />

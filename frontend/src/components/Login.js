@@ -75,6 +75,7 @@ function Login({ onLogin }) {
               required
               placeholder="Enter your email"
               className="form-input"
+              autoComplete="username"
             />
           </div>
 
@@ -88,6 +89,7 @@ function Login({ onLogin }) {
               required
               placeholder="Enter your password"
               className="form-input"
+              autoComplete="current-password"
             />
           </div>
 

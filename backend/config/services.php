@@ -43,8 +43,8 @@ return [
         // Use environment variables for credentials
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        // Default redirect (can be overridden in .env). Use API callback by default.
-        'redirect' => env('GOOGLE_REDIRECT_URI', 'http://localhost:8000/api/auth/google/callback'),
+        // Default redirect (can be overridden in .env). Use backend callback by default.
+        'redirect' => env('GOOGLE_REDIRECT_URI', 'http://localhost:8000/auth/google/callback'),
     ],
 
     'google_search' => [

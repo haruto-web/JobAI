@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Job;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -15,47 +16,48 @@ class JobController extends Controller
 {
     public function index()
     {
-        $jobs = Job::where('status', 'published')->get();
+        try {
+            $jobs = Job::where('status', 'approved')->get();
 
-        $user = Auth::user();
-        if ($user && $user->user_type === 'jobseeker' && $user->profile) {
-            // Use local skill matching instead of AI
-            $userSkills = $user->profile->skills ?? [];
-            if ($user->profile->ai_analysis && isset($user->profile->ai_analysis['skills']) && !empty($user->profile->ai_analysis['skills'])) {
-                $userSkills = array_merge($userSkills, $user->profile->ai_analysis['skills']);
-            }
-            $userSkills = array_unique($userSkills);
-
-            $skillsLower = array_map(fn($s) => strtolower($s), $userSkills);
-            $highMatchJobs = [];
-
-            foreach ($jobs as $job) {
-                $text = strtolower($job->title . ' ' . ($job->description ?? '') . ' ' . ($job->requirements ? json_encode($job->requirements) : ''));
-                $matchCount = 0;
-                foreach ($skillsLower as $skill) {
-                    if ($skill === '') continue;
-                    if (str_contains($text, $skill)) $matchCount++;
+            $user = Auth::user();
+            if ($user && $user->user_type === 'jobseeker' && $user->profile) {
+                $userSkills = $user->profile->skills ?? [];
+                if ($user->profile->ai_analysis && isset($user->profile->ai_analysis['skills']) && !empty($user->profile->ai_analysis['skills'])) {
+                    $userSkills = array_merge($userSkills, $user->profile->ai_analysis['skills']);
                 }
-                $matchScore = $matchCount > 0 ? min(100, (int) floor(($matchCount / max(1, count($skillsLower))) * 100)) : 0;
+                $userSkills = array_unique($userSkills);
 
-                $job->match_score = $matchScore;
+                $skillsLower = array_map(fn($s) => strtolower($s), $userSkills);
+                $highMatchJobs = [];
 
-                // Track high match jobs for notifications
-                if ($matchScore >= 75) {
-                    $highMatchJobs[] = $job;
+                foreach ($jobs as $job) {
+                    $text = strtolower($job->title . ' ' . ($job->description ?? '') . ' ' . ($job->requirements ? json_encode($job->requirements) : ''));
+                    $matchCount = 0;
+                    foreach ($skillsLower as $skill) {
+                        if ($skill === '') continue;
+                        if (str_contains($text, $skill)) $matchCount++;
+                    }
+                    $matchScore = $matchCount > 0 ? min(100, (int) floor(($matchCount / max(1, count($skillsLower))) * 100)) : 0;
+
+                    $job->match_score = $matchScore;
+
+                    if ($matchScore >= 75) {
+                        $highMatchJobs[] = $job;
+                    }
+                }
+
+                $jobs = $jobs->sortByDesc('match_score')->values();
+
+                if (!empty($highMatchJobs)) {
+                    $this->notifyHighMatchJobs($user, $highMatchJobs);
                 }
             }
 
-            // Sort by match score descending
-            $jobs = $jobs->sortByDesc('match_score')->values();
-
-            // Send notification for high match jobs
-            if (!empty($highMatchJobs)) {
-                $this->notifyHighMatchJobs($user, $highMatchJobs);
-            }
+            return response()->json($jobs);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch jobs', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to fetch jobs'], 500);
         }
-
-        return response()->json($jobs);
     }
 
     public function show($id)
@@ -80,7 +82,7 @@ class JobController extends Controller
             'salary' => 'numeric|min:0',
             'requirements' => 'array',
             'urgent' => 'boolean',
-            'status' => 'string|in:draft,published,archived',
+            'status' => 'string|in:draft,pending_approval,approved,rejected,archived',
         ]);
 
         $user = Auth::user();
@@ -90,7 +92,23 @@ class JobController extends Controller
             return response()->json(['message' => 'Only employers can create jobs'], 403);
         }
 
-        $job = Job::create(array_merge($validated, ['user_id' => $user->id, 'status' => $validated['status'] ?? 'published']));
+        $job = Job::create(array_merge($validated, ['user_id' => $user->id, 'status' => 'pending_approval']));
+
+        // Notify admin of new job awaiting approval
+        $admins = User::where('user_type', 'admin')->get();
+        foreach ($admins as $admin) {
+            Notification::create([
+                'user_id' => $admin->id,
+                'type' => 'job_awaiting_approval',
+                'title' => 'New Job Awaiting Approval',
+                'message' => "A new job post from {$user->name} is awaiting approval.",
+                'data' => [
+                    'job_id' => $job->id,
+                    'job_title' => $job->title,
+                    'employer_name' => $user->name,
+                ]
+            ]);
+        }
 
         return response()->json($job, 201);
     }
@@ -120,7 +138,7 @@ class JobController extends Controller
             'salary' => 'numeric|min:0',
             'requirements' => 'array',
             'urgent' => 'boolean',
-            'status' => 'string|in:draft,published,archived',
+            'status' => 'string|in:draft,approved,archived',
         ]);
 
         $job->update($validated);
@@ -147,42 +165,40 @@ class JobController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->input('q', '');
-        if (empty($query)) {
-            return response()->json(['jobs' => []]);
-        }
+        try {
+            $query = $request->input('q', '');
+            if (empty($query)) {
+                return response()->json(['jobs' => []]);
+            }
 
-        $searchTerm = strtolower($query);
+            $searchTerm = strtolower($query);
+            $normalizedTerm = str_replace(
+                ['fulltime', 'partime', 'freelance'],
+                ['full-time', 'part-time', 'contract'],
+                $searchTerm
+            );
 
-        // Normalize common job type variations
-        $normalizedTerm = str_replace(
-            ['fulltime', 'partime', 'freelance'],
-            ['full-time', 'part-time', 'contract'],
-            $searchTerm
-        );
-
-        $jobs = Job::where('status', 'published')
+        $jobs = Job::where('status', 'approved')
             ->where(function($q) use ($searchTerm, $normalizedTerm) {
-                $q->whereRaw('LOWER(title) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('LOWER(description) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('LOWER(summary) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('LOWER(qualifications) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('LOWER(company) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('LOWER(location) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('LOWER(type) LIKE ?', ['%' . $searchTerm . '%'])
-                  ->orWhereRaw('CAST(salary AS CHAR) LIKE ?', ['%' . $searchTerm . '%'])
-                  // Also search with normalized term for job types
-                  ->orWhereRaw('LOWER(type) LIKE ?', ['%' . $normalizedTerm . '%']);
+                $q->where('title', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('description', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('company', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('location', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('type', 'LIKE', '%' . $normalizedTerm . '%');
             })
             ->limit(20)
             ->get();
 
-        return response()->json(['jobs' => $jobs]);
+            return response()->json(['jobs' => $jobs]);
+        } catch (\Exception $e) {
+            Log::error('Job search failed', ['error' => $e->getMessage(), 'query' => $request->input('q')]);
+            return response()->json(['message' => 'Search failed'], 500);
+        }
     }
 
     public function urgentJobs()
     {
-        $urgentJobs = Job::where('status', 'published')
+        $urgentJobs = Job::where('status', 'approved')
             ->where('urgent', true)
             ->get();
         return response()->json($urgentJobs);

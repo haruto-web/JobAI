@@ -22,14 +22,60 @@ class AuthController extends Controller
      */
     public function sendPasswordReset(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
+        $validated = $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ], [
+            'email.exists' => 'No account found with this email address.'
         ]);
 
-        $status = Password::sendResetLink($request->only('email'));
+        try {
+            $token = Str::random(64);
+            
+            \DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $validated['email']],
+                [
+                    'email' => $validated['email'],
+                    'token' => Hash::make($token),
+                    'created_at' => now()
+                ]
+            );
 
-        if ($status === Password::RESET_LINK_SENT) {
-            return response()->json(['message' => 'Password reset link sent. Please check your email.']);
+            return response()->json([
+                'message' => 'Password reset token generated.',
+                'email' => $validated['email'],
+                'token' => $token,
+                'reset_url' => config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($validated['email'])
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Password reset failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to generate reset token.'], 500);
+        }
+    }
+
+    /**
+     * Reset password using token
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Password has been reset successfully.']);
         }
 
         return response()->json(['message' => __($status)], 400);
@@ -95,8 +141,12 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->input('email'))->first();
 
-        if (! $user || ! Hash::check($request->input('password'), $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        if (!$user) {
+            return response()->json(['message' => 'Email not found'], 401);
+        }
+
+        if (!Hash::check($request->input('password'), $user->password)) {
+            return response()->json(['message' => 'Incorrect password'], 401);
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
@@ -157,24 +207,18 @@ class AuthController extends Controller
         $request->validate([
             'bio' => 'nullable|string|max:1000',
             'skills' => 'nullable|array',
-            'experience_level' => 'nullable|in:entry,mid,senior,expert',
+            'experience_level' => 'nullable|in:entry_level,beginner,intermediate,experienced,expert_senior',
+            'years_of_experience' => 'nullable|integer|min:0',
             'portfolio_url' => 'nullable|url',
             'education_attainment' => 'nullable|in:high_school,associate,bachelor,master,phd',
         ]);
 
         $user = $request->user();
-
-        // Ensure user has a profile
         $profile = $this->ensureProfile($user);
-        if (! $profile) {
-            // Defensive fallback: create and re-fetch
-            $user->profile()->create([]);
-            $profile = $this->ensureProfile($user);
-        }
 
-        $profile->update($request->only(['bio', 'skills', 'experience_level', 'portfolio_url', 'education_attainment']));
+        $profile->update($request->only(['bio', 'skills', 'experience_level', 'years_of_experience', 'portfolio_url', 'education_attainment']));
 
-        return response()->json($user->load('profile'));
+        return response()->json($user->fresh()->load('profile'));
     }
 
     private function extractAndMergeSkills($path, $profile)

@@ -29,6 +29,7 @@ class UserProfile extends Model
         'bio',
         'skills',
         'experience_level',
+        'years_of_experience',
         'portfolio_url',
         'resume_url',
         'resumes',

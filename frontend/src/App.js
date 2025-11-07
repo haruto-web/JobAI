@@ -5,6 +5,7 @@ import Navigation from './components/Navigation';
 import Loading from './components/Loading';
 import Login from './components/Login';
 import Register from './components/Register';
+import ResetPassword from './pages/ResetPassword';
 import OAuthCallback from './components/OAuthCallback';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -17,7 +18,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ChatBot from './components/ChatBot';
 import './App.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -32,14 +33,17 @@ function App() {
       setUser(response.data.user);
       setIsLoggedIn(true);
 
-      // Redirect admin users to admin dashboard
+      // Use React Router navigation instead of window.location.href
       if (response.data.user.user_type === 'admin') {
         window.location.href = '/admin';
+      } else {
+        window.location.href = '/dashboard';
       }
     } catch (error) {
       console.error('Login failed:', error);
       setIsLoggedIn(false);
       setUser(null);
+      throw error; // Re-throw the error so Login component can catch it
     }
   };
 
@@ -132,6 +136,7 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/login" element={isLoggedIn ? <Navigate to={user?.user_type === 'admin' ? '/admin' : '/dashboard'} /> : <Login onLogin={handleLogin} />} />
           <Route path="/register" element={isLoggedIn ? <Navigate to={user?.user_type === 'admin' ? '/admin' : '/dashboard'} /> : <Register onRegister={handleRegister} />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/oauth/complete" element={<OAuthCallback />} />
           <Route path="/jobs" element={isLoggedIn && user?.user_type !== 'admin' ? <Jobs /> : <Navigate to="/login" />} />
           <Route path="/job/:id" element={isLoggedIn && user?.user_type !== 'admin' ? <JobDetails /> : <Navigate to="/login" />} />

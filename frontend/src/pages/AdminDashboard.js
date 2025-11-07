@@ -1,88 +1,114 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Pie, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
+import { useApiCall } from '../hooks/useApiCall';
 import './Dashboard.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-
 function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [users, setUsers] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [jobToReject, setJobToReject] = useState(null);
+  const { apiCall, loading, error } = useApiCall();
 
   const fetchDashboard = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        window.location.href = '/login';
-        return;
-      }
-      const response = await axios.get(`${API_URL}/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setDashboardData(response.data);
-    } catch (error) {
-      console.error('Failed to fetch dashboard:', error);
-      if (error.response && error.response.status === 401) {
-        window.location.href = '/login';
-      }
-    } finally {
-      setLoading(false);
+      const data = await apiCall('/dashboard');
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard:', err);
     }
   };
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUsers(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
+      const data = await apiCall('/admin/users');
+      setUsers(data.data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
     }
   };
 
   const fetchJobs = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/admin/jobs`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setJobs(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error);
+      const data = await apiCall('/admin/jobs');
+      setJobs(data.data);
+    } catch (err) {
+      console.error('Failed to fetch jobs:', err);
     }
   };
 
   const fetchApplications = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/admin/applications`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setApplications(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch applications:', error);
+      const data = await apiCall('/admin/applications');
+      setApplications(data.data);
+    } catch (err) {
+      console.error('Failed to fetch applications:', err);
     }
   };
 
   const fetchPayments = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/admin/payments`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPayments(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch payments:', error);
+      const data = await apiCall('/admin/payments');
+      setPayments(data.data);
+    } catch (err) {
+      console.error('Failed to fetch payments:', err);
+    }
+  };
+
+  const handleApproveJob = async (jobId) => {
+    if (!window.confirm('Are you sure you want to approve this job?')) return;
+    try {
+      await apiCall(`/admin/jobs/${jobId}/approve`, 'POST');
+      alert('Job approved successfully');
+      fetchJobs();
+    } catch (err) {
+      alert('Failed to approve job: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleRejectJob = (jobId) => {
+    setJobToReject(jobId);
+    setShowRejectModal(true);
+  };
+
+  const confirmRejectJob = async () => {
+    if (!rejectReason.trim()) {
+      alert('Please provide a reason for rejection');
+      return;
+    }
+    try {
+      await apiCall(`/admin/jobs/${jobToReject}/reject`, 'POST', { reason: rejectReason });
+      alert('Job rejected successfully');
+      setShowRejectModal(false);
+      setRejectReason('');
+      setJobToReject(null);
+      fetchJobs();
+    } catch (err) {
+      alert('Failed to reject job: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleViewJobDetails = (job) => {
+    setSelectedJob(job);
+  };
+
+  const handleDeleteJob = async (jobId) => {
+    if (!window.confirm('Are you sure you want to delete this job? This action cannot be undone.')) return;
+    try {
+      await apiCall(`/admin/jobs/${jobId}`, 'DELETE');
+      alert('Job deleted successfully');
+      fetchJobs();
+    } catch (err) {
+      alert('Failed to delete job: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -101,36 +127,13 @@ function AdminDashboard() {
     return <div>Loading admin dashboard...</div>;
   }
 
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
   if (!dashboardData) {
     return <div>Failed to load admin dashboard.</div>;
   }
-
-  const userTypesData = {
-    labels: ['Job Seekers', 'Employers', 'Admins'],
-    datasets: [{
-      data: [
-        dashboardData.graphs.user_types.jobseeker,
-        dashboardData.graphs.user_types.employer,
-        dashboardData.graphs.user_types.admin
-      ],
-      backgroundColor: ['#007bff', '#28a745', '#dc3545'],
-      borderColor: ['#007bff', '#28a745', '#dc3545'],
-      borderWidth: 1,
-    }],
-  };
-
-  const applicationStatusData = {
-    labels: ['Pending', 'Accepted', 'Rejected'],
-    datasets: [{
-      label: 'Applications',
-      data: [
-        dashboardData.graphs.application_status.pending,
-        dashboardData.graphs.application_status.accepted,
-        dashboardData.graphs.application_status.rejected
-      ],
-      backgroundColor: ['#ffc107', '#28a745', '#dc3545'],
-    }],
-  };
 
   return (
     <div className="dashboard-container">
@@ -197,11 +200,32 @@ function AdminDashboard() {
             <div className="charts-container">
               <div className="chart-card">
                 <h3>User Types Distribution</h3>
-                <Pie data={userTypesData} />
+                <Pie data={{
+                  labels: ['Jobseekers', 'Employers', 'Admins'],
+                  datasets: [{
+                    data: [
+                      dashboardData.summary.jobseekers || 0,
+                      dashboardData.summary.employers || 0,
+                      dashboardData.summary.admins || 0
+                    ],
+                    backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56']
+                  }]
+                }} />
               </div>
               <div className="chart-card">
                 <h3>Application Status</h3>
-                <Bar data={applicationStatusData} />
+                <Bar data={{
+                  labels: ['Pending', 'Accepted', 'Rejected'],
+                  datasets: [{
+                    label: 'Applications',
+                    data: [
+                      dashboardData.summary.pending_applications || 0,
+                      dashboardData.summary.accepted_applications || 0,
+                      dashboardData.summary.rejected_applications || 0
+                    ],
+                    backgroundColor: ['#FFCE56', '#36A2EB', '#FF6384']
+                  }]
+                }} />
               </div>
             </div>
 
@@ -274,14 +298,15 @@ function AdminDashboard() {
 
         {activeTab === 'jobs' && (
           <div className="admin-table">
-            <h3>Jobs Management</h3>
+            <h3>Job Listings Management</h3>
             <table>
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Title</th>
                   <th>Company</th>
-                  <th>Posted by</th>
+                  <th>Employer</th>
+                  <th>Status</th>
                   <th>Urgent</th>
                   <th>Created</th>
                   <th>Actions</th>
@@ -294,16 +319,122 @@ function AdminDashboard() {
                     <td>{job.title}</td>
                     <td>{job.company}</td>
                     <td>{job.user?.name || 'Unknown'}</td>
+                    <td>
+                      <span className={`status-${job.status}`}>
+                        {job.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </td>
                     <td>{job.urgent ? 'Yes' : 'No'}</td>
                     <td>{new Date(job.created_at).toLocaleDateString()}</td>
                     <td>
-                      <button>Edit</button>
-                      <button>Delete</button>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                        {(job.status === 'pending_approval' || job.status === 'draft') && (
+                          <>
+                            <button
+                              onClick={() => handleApproveJob(job.id)}
+                              style={{ backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectJob(job.id)}
+                              style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleViewJobDetails(job)}
+                          style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
+                        >
+                          View Details
+                        </button>
+                        <button
+                          onClick={() => handleDeleteJob(job.id)}
+                          style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {selectedJob && (
+              <div className="job-details-modal" style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'white',
+                padding: '20px',
+                borderRadius: '5px',
+                boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+                zIndex: 1000,
+                maxWidth: '600px',
+                maxHeight: '80vh',
+                overflowY: 'auto'
+              }}>
+                <h3>Job Details</h3>
+                <p><strong>Title:</strong> {selectedJob.title}</p>
+                <p><strong>Company:</strong> {selectedJob.company}</p>
+                <p><strong>Location:</strong> {selectedJob.location}</p>
+                <p><strong>Type:</strong> {selectedJob.type}</p>
+                <p><strong>Salary:</strong> {selectedJob.salary ? `$${selectedJob.salary}` : 'Not specified'}</p>
+                <p><strong>Description:</strong> {selectedJob.description}</p>
+                <p><strong>Employer:</strong> {selectedJob.user?.name} ({selectedJob.user?.email})</p>
+                <p><strong>Status:</strong> {selectedJob.status}</p>
+                <p><strong>Created:</strong> {new Date(selectedJob.created_at).toLocaleString()}</p>
+                <button
+                  onClick={() => setSelectedJob(null)}
+                  style={{ marginTop: '10px', padding: '5px 10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+              </div>
+            )}
+
+            {showRejectModal && (
+              <div className="reject-modal" style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'white',
+                padding: '20px',
+                borderRadius: '5px',
+                boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+                zIndex: 1000,
+                maxWidth: '400px'
+              }}>
+                <h3>Reject Job Post</h3>
+                <p>Provide a reason for rejection:</p>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows="4"
+                  style={{ width: '100%', marginBottom: '10px', padding: '8px' }}
+                  placeholder="Enter rejection reason..."
+                />
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={confirmRejectJob}
+                    style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '3px', cursor: 'pointer' }}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => setShowRejectModal(false)}
+                    style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '3px', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

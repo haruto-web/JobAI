@@ -14,21 +14,27 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+            if (!$user) {
+                return response()->json(['message' => 'Unauthenticated'], 401);
+            }
+
+            switch ($user->user_type) {
+                case 'jobseeker':
+                    return $this->jobseekerDashboard($user);
+                case 'employer':
+                    return $this->employerDashboard($user);
+                case 'admin':
+                    return $this->adminDashboard($user);
+                default:
+                    return response()->json(['message' => 'Invalid user type'], 400);
+            }
+        } catch (\Exception $e) {
+            Log::error('Dashboard fetch failed', ['error' => $e->getMessage(), 'user_id' => Auth::id()]);
+            return response()->json(['message' => 'Failed to load dashboard'], 500);
         }
-
-        if ($user->user_type === 'jobseeker') {
-            return $this->jobseekerDashboard($user);
-        } elseif ($user->user_type === 'employer') {
-            return $this->employerDashboard($user);
-        } elseif ($user->user_type === 'admin') {
-            return $this->adminDashboard($user);
-        }
-
-        return response()->json(['message' => 'Invalid user type'], 400);
     }
 
     private function jobseekerDashboard(User $user)
@@ -72,11 +78,20 @@ class DashboardController extends Controller
 
     private function employerDashboard(User $user)
     {
-        $jobs = Job::where('user_id', $user->id)->with('applications')->get();
+        $jobs = Job::where('user_id', $user->id)
+            ->withCount('applications')
+            ->with(['applications' => function($query) {
+                $query->select('id', 'job_id', 'status', 'created_at');
+            }])
+            ->get();
 
         $applications = Application::whereHas('job', function ($query) use ($user) {
             $query->where('user_id', $user->id);
-        })->with(['user', 'job'])->get();
+        })->with([
+            'user:id,name,email',
+            'user.profile:id,user_id,skills,experience_level',
+            'job:id,title,company,user_id'
+        ])->get();
 
         $workingOnJobs = Application::whereHas('job', function ($query) use ($user) {
             $query->where('user_id', $user->id);
@@ -125,19 +140,27 @@ class DashboardController extends Controller
             ];
         });
 
-        // Application trends (last 7 days)
-        $applicationTrends = [];
+        // Application trends (last 7 days) - optimized single query
+        $applicationTrends = Application::selectRaw('DATE(created_at) as date, COUNT(*) as applications')
+            ->whereHas('job', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->where('created_at', '>=', now()->subDays(6))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        // Fill missing dates with 0 applications
+        $trends = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
-            $count = Application::whereHas('job', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })->whereDate('created_at', $date)->count();
-
-            $applicationTrends[] = [
+            $trends[] = [
                 'date' => $date,
-                'applications' => $count,
+                'applications' => $applicationTrends->get($date)?->applications ?? 0,
             ];
         }
+        $applicationTrends = $trends;
 
         // Recent activity feed
         $recentActivities = [];

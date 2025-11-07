@@ -352,6 +352,7 @@ function Dashboard() {
                     <p><strong>Skills:</strong> {dashboardData.profile.skills.join(', ')}</p>
                   )}
                   {dashboardData.profile.experience_level && <p><strong>Experience Level:</strong> {dashboardData.profile.experience_level}</p>}
+                  {dashboardData.profile.years_of_experience && <p><strong>Years of Experience:</strong> {dashboardData.profile.years_of_experience}</p>}
                 </div>
               </details>
             )}
@@ -624,7 +625,27 @@ function Dashboard() {
                       <p><strong>Type:</strong> {job.type}</p>
                       <p><strong>Salary:</strong> {job.salary ? `$${job.salary}` : 'Not specified'}</p>
                       <p><strong>Requirements:</strong> {job.requirements && job.requirements.length > 0 ? job.requirements.join(', ') : 'None'}</p>
+                      <p><strong>Status:</strong>
+                        <span className={`status-${job.status}`}>
+                          {job.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </p>
                       <p><strong>Urgent:</strong> {job.urgent ? 'Yes' : 'No'}</p>
+                      {job.status === 'rejected' && job.rejection_reason && (
+                        <div className="rejection-notice" style={{ backgroundColor: '#fee', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
+                          <p><strong>❌ Rejection Reason:</strong> {job.rejection_reason}</p>
+                        </div>
+                      )}
+                      {job.status === 'pending_approval' && (
+                        <div className="pending-notice" style={{ backgroundColor: '#fff3cd', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
+                          <p><strong>⏳ Pending Approval:</strong> Your job is awaiting admin approval. It will be visible to job seekers once approved.</p>
+                        </div>
+                      )}
+                      {job.status === 'approved' && (
+                        <div className="approved-notice" style={{ backgroundColor: '#d4edda', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
+                          <p><strong>✅ Approved:</strong> Your job is now live and visible to job seekers on the Jobs page.</p>
+                        </div>
+                      )}
                       <p>Applications: {job.applications ? job.applications.length : 0}</p>
                       <button
                         onClick={() => handleToggleUrgent(job.id, job.urgent)}
@@ -683,19 +704,30 @@ function Dashboard() {
                       
                       <div className="applicant-info">
                         <h4>👤 Applicant: {app.user.name}</h4>
-                        <p>📧 Email: {app.user.email}</p>
+                        <p>📧 Email: <a href={`/user/${app.user.id}`} className="email-link">{app.user.email}</a></p>
                         
                         {/* Resume Information */}
                         {app.user.profile && (
                           <div className="resume-section">
                             <h5>📄 Resume & Profile</h5>
-                            {app.user.profile.resumes && app.user.profile.resumes.length > 0 ? (
+                            {app.resume_path ? (
+                              <div className="resume-links">
+                                <a
+                                  href={`${API_URL}/storage/${app.resume_path}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="resume-link"
+                                >
+                                  📎 View Submitted Resume
+                                </a>
+                              </div>
+                            ) : app.user.profile.resumes && app.user.profile.resumes.length > 0 ? (
                               <div className="resume-links">
                                 {app.user.profile.resumes.map((resume, index) => (
-                                  <a 
-                                    key={index} 
-                                    href={`${API_URL}/storage/${resume.url}`} 
-                                    target="_blank" 
+                                  <a
+                                    key={index}
+                                    href={`${API_URL}/storage/${resume.url}`}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="resume-link"
                                   >
@@ -704,9 +736,9 @@ function Dashboard() {
                                 ))}
                               </div>
                             ) : app.user.profile.resume_url ? (
-                              <a 
-                                href={`${API_URL}/storage/${app.user.profile.resume_url}`} 
-                                target="_blank" 
+                              <a
+                                href={`${API_URL}/storage/${app.user.profile.resume_url}`}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="resume-link"
                               >
@@ -729,10 +761,22 @@ function Dashboard() {
                                   <p>{app.user.profile.resume_summary}</p>
                                 </div>
                               )}
-                              {app.user.profile.extracted_experience && (
+      {app.user.profile.experience_level && (
+        <div className="ai-item">
+          <strong>Experience Level:</strong>
+          <span>{app.user.profile.experience_level}</span>
+        </div>
+      )}
+      {app.user.profile.years_of_experience && (
+        <div className="ai-item">
+          <strong>Years of Experience:</strong>
+          <span>{app.user.profile.years_of_experience}</span>
+        </div>
+      )}
+                              {app.user.profile.education_attainment && (
                                 <div className="ai-item">
-                                  <strong>Experience:</strong>
-                                  <span>{app.user.profile.extracted_experience}</span>
+                                  <strong>Education Attainment:</strong>
+                                  <span>{app.user.profile.education_attainment}</span>
                                 </div>
                               )}
                               {app.user.profile.skills && app.user.profile.skills.length > 0 && (

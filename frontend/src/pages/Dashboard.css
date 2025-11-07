@@ -199,6 +199,18 @@
   color: var(--text-dark);
 }
 
+.email-link {
+  color: var(--primary-purple);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.email-link:hover {
+  color: var(--primary-blue);
+  text-decoration: underline;
+}
+
 .resume-link {
   display: inline-block;
   margin-right: var(--space-md);

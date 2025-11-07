@@ -76,7 +76,7 @@ function UserProfile() {
                 <p><strong>Skills:</strong> {user.profile.skills.join(', ')}</p>
               )}
               {user.profile?.experience_level && (
-                <p><strong>Experience:</strong> {user.profile.experience_level}</p>
+                <p><strong>Experience Level:</strong> {user.profile.experience_level}</p>
               )}
             </div>
           </>

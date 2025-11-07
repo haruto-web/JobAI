@@ -75,52 +75,20 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
           )}
 
           {isLoggedIn && userType === 'admin' && (
-            <div className="nav-dropdown">
-              <button
-                className={`nav-link dropdown-toggle ${isAdminDropdownOpen ? 'active' : ''}`}
-                onClick={toggleAdminDropdown}
+            <>
+              <Link
+                to="/admin"
+                className={`nav-link ${isActive('/admin') ? 'active' : ''}`}
               >
-                Dashboard
-              </button>
-              {isAdminDropdownOpen && (
-                <div className="dropdown-menu">
-                  <Link
-                    to="/dashboard"
-                    className="dropdown-item"
-                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                  >
-                    Dashboard Overview
-                  </Link>
-                  <Link
-                    to="/admin/analytics"
-                    className="dropdown-item"
-                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                  >
-                    📊 Analytics & Insights
-                  </Link>
-                  <Link
-                    to="/admin/create-job"
-                    className="dropdown-item"
-                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                  >
-                    Create New Job
-                  </Link>
-                  <Link
-                    to="/admin/job-postings"
-                    className="dropdown-item"
-                    onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                  >
-                    Your Job Postings
-                  </Link>
-                </div>
-              )}
+                Admin Dashboard
+              </Link>
               <Link 
                 to="/account" 
                 className={`nav-link ${isActive('/account') ? 'active' : ''}`}
               >
                 Account
               </Link>
-            </div>
+            </>
           )}
         </div>
 
@@ -208,46 +176,13 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
 
           {isLoggedIn && userType === 'admin' && (
             <>
-              <div className="mobile-nav-dropdown">
-                <button
-                  className={`mobile-nav-link dropdown-toggle ${isAdminDropdownOpen ? 'active' : ''}`}
-                  onClick={toggleAdminDropdown}
-                >
-                  Dashboard
-                </button>
-                {isAdminDropdownOpen && (
-                  <div className="mobile-dropdown-menu">
-                    <Link
-                      to="/dashboard"
-                      className="mobile-dropdown-item"
-                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                    >
-                      Dashboard Overview
-                    </Link>
-                    <Link
-                      to="/admin/analytics"
-                      className="mobile-dropdown-item"
-                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                    >
-                      📊 Analytics & Insights
-                    </Link>
-                    <Link
-                      to="/admin/create-job"
-                      className="mobile-dropdown-item"
-                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                    >
-                      Create New Job
-                    </Link>
-                    <Link
-                      to="/admin/job-postings"
-                      className="mobile-dropdown-item"
-                      onClick={() => { closeMobileMenu(); setIsAdminDropdownOpen(false); }}
-                    >
-                      Your Job Postings
-                    </Link>
-                  </div>
-                )}
-              </div>
+              <Link
+                to="/admin"
+                className={`mobile-nav-link ${isActive('/admin') ? 'active' : ''}`}
+                onClick={closeMobileMenu}
+              >
+                Admin Dashboard
+              </Link>
               <Link 
                 to="/account" 
                 className={`mobile-nav-link ${isActive('/account') ? 'active' : ''}`}

@@ -40,6 +40,7 @@ class DatabaseSeeder extends Seeder
                 'salary' => 120000,
                 'requirements' => ['PHP', 'Laravel', 'JavaScript', 'React'],
                 'user_id' => $employer->id,
+                'status' => 'pending_approval',
             ],
             [
                 'title' => 'Frontend Developer',
@@ -50,6 +51,7 @@ class DatabaseSeeder extends Seeder
                 'salary' => 95000,
                 'requirements' => ['JavaScript', 'React', 'CSS', 'HTML'],
                 'user_id' => $employer->id,
+                'status' => 'pending_approval',
             ],
             [
                 'title' => 'Backend Developer',
@@ -244,7 +246,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($jobs as $jobData) {
-            Job::create($jobData);
+            Job::create(array_merge($jobData, ['status' => 'pending_approval']));
         }
 
         // Create sample applications for the jobseeker
@@ -266,10 +268,10 @@ class DatabaseSeeder extends Seeder
 
         // Create admin user
         User::updateOrCreate(
-            ['email' => 'admin123@gmail.com'],
+            ['email' => 'venandrewmirasol@gmail.com'],
             [
                 'name' => 'Admin User',
-                'password' => Hash::make('admin123456678'),
+                'password' => Hash::make('admin12345'),
                 'user_type' => 'admin',
             ]
         );

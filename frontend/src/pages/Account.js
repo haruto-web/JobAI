@@ -12,6 +12,8 @@ function Account({ isLoggedIn }) {
   const [profileData, setProfileData] = useState({
     bio: '',
     skills: [],
+    experience_level: '',
+    years_of_experience: '',
     education_attainment: ''
   });
   const [editingProfile, setEditingProfile] = useState(false);
@@ -31,6 +33,8 @@ function Account({ isLoggedIn }) {
             setProfileData({
               bio: response.data.profile.bio || '',
               skills: response.data.profile.skills || [],
+              experience_level: response.data.profile.experience_level || '',
+              years_of_experience: response.data.profile.years_of_experience || '',
               education_attainment: response.data.profile.education_attainment || ''
             });
           }
@@ -88,7 +92,17 @@ function Account({ isLoggedIn }) {
   const handleSaveProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${API_URL}/user/profile`, profileData, {
+      const dataToSend = {};
+      
+      if (profileData.bio) dataToSend.bio = profileData.bio;
+      if (profileData.skills && profileData.skills.length > 0) {
+        dataToSend.skills = profileData.skills.filter(s => s.trim() !== '');
+      }
+      if (profileData.experience_level) dataToSend.experience_level = profileData.experience_level;
+      if (profileData.years_of_experience) dataToSend.years_of_experience = parseInt(profileData.years_of_experience);
+      if (profileData.education_attainment) dataToSend.education_attainment = profileData.education_attainment;
+      
+      await axios.put(`${API_URL}/user/profile`, dataToSend, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser({ ...user, profile: profileData });
@@ -96,7 +110,10 @@ function Account({ isLoggedIn }) {
       alert('Profile updated successfully!');
     } catch (error) {
       console.error('Failed to update profile:', error);
-      alert('Failed to update profile. Please try again.');
+      const errorMsg = error.response?.data?.errors 
+        ? Object.values(error.response.data.errors).flat().join('\n')
+        : error.response?.data?.message || 'Failed to update profile. Please try again.';
+      alert(errorMsg);
     }
   };
 
@@ -226,6 +243,26 @@ function Account({ isLoggedIn }) {
                       onChange={(e) => setProfileData({ ...profileData, skills: e.target.value.split(',').map(s => s.trim()) })}
                       placeholder="Skills that you have"
                     />
+                    <label>Experience Level:</label>
+                    <select
+                      value={profileData.experience_level}
+                      onChange={(e) => setProfileData({ ...profileData, experience_level: e.target.value })}
+                    >
+                      <option value="">Select experience level</option>
+                      <option value="entry_level">Entry Level</option>
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="experienced">Experienced</option>
+                      <option value="expert_senior">Expert / Senior</option>
+                    </select>
+                    <label>Years of Experience:</label>
+                    <input
+                      type="number"
+                      value={profileData.years_of_experience}
+                      onChange={(e) => setProfileData({ ...profileData, years_of_experience: e.target.value })}
+                      placeholder="Years of experience"
+                      min="0"
+                    />
                     <label>Education Attainment:</label>
                     <select
                       value={profileData.education_attainment}
@@ -251,6 +288,8 @@ function Account({ isLoggedIn }) {
                         {user.profile.skills && user.profile.skills.length > 0 && (
                           <p><strong>Skills:</strong> {user.profile.skills.join(', ')}</p>
                         )}
+                        {user.profile.experience_level && <p><strong>Experience Level:</strong> {user.profile.experience_level}</p>}
+                        {user.profile.years_of_experience && <p><strong>Years of Experience:</strong> {user.profile.years_of_experience}</p>}
                         {user.profile.education_attainment && <p><strong>Education Attainment:</strong> {user.profile.education_attainment}</p>}
 
 

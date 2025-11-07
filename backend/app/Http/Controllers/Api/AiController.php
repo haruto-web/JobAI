@@ -112,7 +112,7 @@ class AiController extends Controller
             // Also include local job matching as fallback
             $localSuggestions = [];
             if (!empty($skills)) {
-                $jobs = Job::all();
+                $jobs = Job::where('status', 'approved')->get();
                 $skillsLower = array_map(fn($s) => strtolower($s), $skills);
 
                 $scored = [];
@@ -206,7 +206,7 @@ class AiController extends Controller
         $limit = $request->input('limit', 5);
 
         // Use local job matching to suggest jobs from existing database
-        $jobs = Job::all();
+        $jobs = Job::where('status', 'approved')->get();
         $skillsLower = array_map(fn($s) => strtolower($s), $skills);
 
         $scored = [];
@@ -434,7 +434,7 @@ class AiController extends Controller
             if ($hasSkills) {
                 $skills = $profile->skills;
                 // Use local job matching to suggest jobs
-                $jobs = Job::all();
+                $jobs = Job::where('status', 'approved')->get();
                 $skillsLower = array_map(fn($s) => strtolower($s), $skills);
                 $scored = [];
                 foreach ($jobs as $job) {
@@ -764,7 +764,7 @@ class AiController extends Controller
                 'salary' => is_numeric($data['salary']) ? (float) $data['salary'] : null,
                 'company' => $user->name ?? 'Company', // Use user's name as company or default
                 'user_id' => $user->id,
-                'status' => 'published',
+                'status' => 'approved',
                 'requirements' => [], // Can be expanded later
             ]);
 
@@ -865,7 +865,7 @@ class AiController extends Controller
                 'salary' => is_numeric($parsedDetails['salary']) ? (float) $parsedDetails['salary'] : null,
                 'company' => $parsedDetails['company'] ?? $user->name ?? 'Company',
                 'user_id' => $user->id,
-                'status' => 'published',
+                'status' => 'approved',
                 'requirements' => [],
             ]);
 
@@ -926,7 +926,7 @@ class AiController extends Controller
                     'salary' => is_numeric($jobDraft['salary']) ? (float) $jobDraft['salary'] : null,
                     'company' => $user->name ?? 'Company',
                     'user_id' => $user->id,
-                    'status' => 'published',
+                    'status' => 'approved',
                     'requirements' => [],
                 ]);
 

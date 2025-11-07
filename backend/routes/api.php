@@ -78,6 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('jobs', [AdminController::class, 'getJobs']);
         Route::put('jobs/{job}', [AdminController::class, 'updateJob']);
+        Route::post('jobs/{job}/approve', [AdminController::class, 'approveJob']);
+        Route::post('jobs/{job}/reject', [AdminController::class, 'rejectJob']);
         Route::delete('jobs/{job}', [AdminController::class, 'deleteJob']);
 
         Route::get('applications', [AdminController::class, 'getApplications']);

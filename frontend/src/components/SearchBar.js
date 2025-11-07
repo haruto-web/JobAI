@@ -102,7 +102,7 @@ function SearchBar() {
                           <p>Skills: {item.profile.skills.join(', ')}</p>
                         )}
                         {item.profile.experience_level && (
-                          <p>Experience: {item.profile.experience_level}</p>
+                          <p>Experience Level: {item.profile.experience_level}</p>
                         )}
                       </div>
                     )}

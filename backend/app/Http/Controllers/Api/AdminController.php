@@ -7,8 +7,10 @@ use App\Models\User;
 use App\Models\Job;
 use App\Models\Application;
 use App\Models\Payment;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
@@ -101,6 +103,7 @@ class AdminController extends Controller
             'type' => 'sometimes|in:full-time,part-time,contract',
             'salary' => 'sometimes|numeric|nullable',
             'urgent' => 'sometimes|boolean',
+            'status' => 'sometimes|in:draft,pending_approval,approved,rejected,archived',
         ]);
 
         $job->update($request->all());
@@ -108,11 +111,69 @@ class AdminController extends Controller
         return response()->json(['message' => 'Job updated successfully', 'job' => $job]);
     }
 
+    public function approveJob(Job $job)
+    {
+        if (!in_array($job->status, ['pending_approval', 'draft'])) {
+            return response()->json(['message' => 'Job cannot be approved'], 400);
+        }
+
+        $job->update(['status' => 'approved']);
+
+        // Notify employer
+        Notification::create([
+            'user_id' => $job->user_id,
+            'type' => 'job_approved',
+            'title' => 'Job Post Approved',
+            'message' => "Your job post '{$job->title}' has been approved and is now visible on the Jobs page.",
+            'data' => [
+                'job_id' => $job->id,
+                'job_title' => $job->title,
+            ]
+        ]);
+
+        return response()->json(['message' => 'Job approved successfully', 'job' => $job]);
+    }
+
+    public function rejectJob(Request $request, Job $job)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        if (!in_array($job->status, ['pending_approval', 'draft'])) {
+            return response()->json(['message' => 'Job cannot be rejected'], 400);
+        }
+
+        $job->update([
+            'status' => 'rejected',
+            'rejection_reason' => $request->reason
+        ]);
+
+        // Notify employer with rejection reason
+        Notification::create([
+            'user_id' => $job->user_id,
+            'type' => 'job_rejected',
+            'title' => 'Job Post Rejected',
+            'message' => "Your job post '{$job->title}' was rejected by the admin. Reason: {$request->reason}",
+            'data' => [
+                'job_id' => $job->id,
+                'job_title' => $job->title,
+                'reason' => $request->reason,
+            ]
+        ]);
+
+        return response()->json(['message' => 'Job rejected successfully', 'job' => $job]);
+    }
+
     public function deleteJob(Job $job)
     {
-        $job->delete();
-
-        return response()->json(['message' => 'Job deleted successfully']);
+        try {
+            $job->delete();
+            return response()->json(['message' => 'Job deleted successfully']);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete job', ['job_id' => $job->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to delete job'], 500);
+        }
     }
 
     public function updateApplication(Request $request, Application $application)
@@ -121,7 +182,7 @@ class AdminController extends Controller
             'status' => 'required|in:pending,accepted,rejected',
         ]);
 
-        $application->update($request->only(['status']));
+        $application->update(['status' => $request->status]);
 
         return response()->json(['message' => 'Application updated successfully', 'application' => $application]);
     }

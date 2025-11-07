@@ -38,6 +38,7 @@ class Job extends Model
         'user_id',
         'urgent',
         'status',
+        'rejection_reason',
     ];
 
     protected $casts = [

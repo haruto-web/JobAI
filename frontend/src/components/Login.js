@@ -15,15 +15,24 @@ function Login({ onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+
     setError(null);
     setLoading(true);
+
     try {
       await onLogin(email, password);
+      // If successful, the onLogin function will handle the redirect
     } catch (err) {
-      setError('Login failed. Please check your credentials.');
-    } finally {
+      const errorMessage = err.response?.data?.message || 'Login failed. Please check your credentials.';
+      setError(errorMessage);
       setLoading(false);
+      // Do not proceed with any redirects or form submission
+      e.preventDefault();
+      return false;
     }
+
+    setLoading(false);
   };
 
   const handleGoogleLogin = () => {
@@ -42,10 +51,18 @@ function Login({ onLogin }) {
         email: forgotPasswordEmail
       });
 
-      setForgotPasswordMessage('Password reset link sent! Check your email.');
-      setForgotPasswordEmail('');
+      const { email, token, reset_url } = response.data;
+      setForgotPasswordMessage(
+        `Password reset token generated!\n\nEmail: ${email}\nToken: ${token}\n\nReset URL: ${reset_url}`
+      );
     } catch (error) {
-      setForgotPasswordMessage('Failed to send reset link. Please try again.');
+      let errorMsg = 'Failed to send reset link. Please try again.';
+      if (error.response?.data?.errors?.email) {
+        errorMsg = error.response.data.errors.email[0];
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      setForgotPasswordMessage(errorMsg);
     }
   };
 
@@ -169,7 +186,7 @@ function Login({ onLogin }) {
               </div>
 
               {forgotPasswordMessage && (
-                <div className={`message ${forgotPasswordMessage.includes('Failed') ? 'error' : 'success'}`}>
+                <div className={`message ${forgotPasswordMessage.includes('Failed') ? 'error' : 'success'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                   {forgotPasswordMessage}
                 </div>
               )}

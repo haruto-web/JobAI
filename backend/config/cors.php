@@ -19,16 +19,18 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:5173', // React dev server
+    'allowed_origins' => array_filter([
+        'http://localhost:5173',
         'http://127.0.0.1:5173',
-        'http://localhost:3000', // Create React App dev server
+        'http://localhost:3000',
         'http://127.0.0.1:3000',
-        'http://localhost:3001', // Additional port for Create React App
+        'http://localhost:3001',
         'http://127.0.0.1:3001',
-        'http://localhost:3003', // Current React dev server port
+        'http://localhost:3003',
         'http://127.0.0.1:3003',
-    ],
+        env('FRONTEND_URL'),
+        env('CORS_ALLOWED_ORIGINS'),
+    ]),
 
     'allowed_origins_patterns' => [],
 

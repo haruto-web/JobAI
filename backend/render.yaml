@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: ai-job-recommendation-backend
+    env: php
+    buildCommand: composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache
+    startCommand: php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+
+databases:
+  - name: ai-job-recommendation-db
+    databaseName: ai_job_recommendation_db
+    user: ai_job_user

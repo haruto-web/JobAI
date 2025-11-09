@@ -1,0 +1,32 @@
+# Environment files with secrets
+backend/.env
+frontend/.env
+.env
+
+# Dependencies
+node_modules/
+backend/vendor/
+
+# Build outputs
+frontend/build/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+
+# Logs
+*.log
+backend/storage/logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.cache

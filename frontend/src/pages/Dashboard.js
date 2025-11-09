@@ -97,7 +97,8 @@ function Dashboard() {
       fetchDashboard(); // Refresh dashboard data
     } catch (error) {
       console.error('Failed to update job:', error);
-      alert('Failed to update job. Please try again.');
+      const errorMsg = error.response?.data?.message || error.response?.data?.errors || 'Failed to update job. Please try again.';
+      alert(typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : errorMsg);
     } finally {
       setCreatingJob(false);
     }

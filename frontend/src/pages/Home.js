@@ -25,16 +25,21 @@ function Home() {
     };
 
     const fetchUser = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return; // Don't make API call if no token
+      
       try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const response = await axios.get(`${API_URL}/user`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setUser(response.data);
-        }
+        const response = await axios.get(`${API_URL}/user`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUser(response.data);
       } catch (error) {
-        console.error('Failed to fetch user:', error);
+        // Clear invalid token on 401
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+        } else {
+          console.error('Failed to fetch user:', error);
+        }
       }
     };
 

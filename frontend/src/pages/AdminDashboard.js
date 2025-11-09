@@ -24,7 +24,9 @@ function AdminDashboard() {
       const data = await apiCall('/dashboard');
       setDashboardData(data);
     } catch (err) {
-      console.error('Failed to fetch dashboard:', err);
+      if (!err.silent && err.response?.status !== 401) {
+        console.error('Failed to fetch dashboard:', err);
+      }
     }
   };
 

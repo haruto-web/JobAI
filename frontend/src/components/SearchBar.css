@@ -89,3 +89,22 @@
   color: #666;
   font-style: italic;
 }
+
+/* Mobile responsiveness */
+@media (max-width: 767px) {
+  .search-bar {
+    flex-direction: column;
+  }
+
+  .search-type-select,
+  .search-input,
+  .search-button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .search-type-select {
+    min-width: 100%;
+  }
+}

@@ -116,7 +116,10 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
         {/* Mobile Menu Button */}
         <button 
           className="mobile-menu-btn"
-          onClick={toggleMobileMenu}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleMobileMenu();
+          }}
           aria-label="Toggle mobile menu"
         >
           <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}>
@@ -128,19 +131,37 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
       </div>
 
       {/* Mobile Menu */}
-      <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
-        <div className="mobile-menu-content">
+      <div 
+        className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}
+        onClick={(e) => {
+          // Close menu when clicking on overlay (outside content)
+          if (e.target.classList.contains('mobile-menu')) {
+            e.stopPropagation();
+            closeMobileMenu();
+          }
+        }}
+      >
+        <div 
+          className="mobile-menu-content"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Link 
             to="/" 
             className={`mobile-nav-link ${isActive('/') ? 'active' : ''}`}
-            onClick={closeMobileMenu}
+            onClick={(e) => {
+              e.stopPropagation();
+              closeMobileMenu();
+            }}
           >
             Home
           </Link>
           <Link 
             to="/about" 
             className={`mobile-nav-link ${isActive('/about') ? 'active' : ''}`}
-            onClick={closeMobileMenu}
+            onClick={(e) => {
+              e.stopPropagation();
+              closeMobileMenu();
+            }}
           >
             About
           </Link>
@@ -150,25 +171,41 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
               <Link 
                 to="/jobs" 
                 className={`mobile-nav-link ${isActive('/jobs') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMobileMenu();
+                }}
               >
                 Jobs
               </Link>
               <Link
                 to="/dashboard"
                 className={`mobile-nav-link ${isActive('/dashboard') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMobileMenu();
+                }}
               >
                 Dashboard
               </Link>
               <Link 
                 to="/account" 
                 className={`mobile-nav-link ${isActive('/account') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMobileMenu();
+                }}
               >
                 Account
               </Link>
-              <button onClick={() => { onLogout(); closeMobileMenu(); }} className="mobile-logout-btn">
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  onLogout(); 
+                  closeMobileMenu(); 
+                }} 
+                className="mobile-logout-btn"
+              >
                 Sign Out
               </button>
             </>
@@ -179,18 +216,31 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
               <Link
                 to="/admin"
                 className={`mobile-nav-link ${isActive('/admin') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMobileMenu();
+                }}
               >
                 Admin Dashboard
               </Link>
               <Link 
                 to="/account" 
                 className={`mobile-nav-link ${isActive('/account') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMobileMenu();
+                }}
               >
                 Account
               </Link>
-              <button onClick={() => { onLogout(); closeMobileMenu(); }} className="mobile-logout-btn">
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  onLogout(); 
+                  closeMobileMenu(); 
+                }} 
+                className="mobile-logout-btn"
+              >
                 Sign Out
               </button>
             </>
@@ -201,14 +251,20 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
               <Link 
                 to="/login" 
                 className="mobile-auth-link"
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMobileMenu();
+                }}
               >
                 Sign In
               </Link>
               <Link 
                 to="/register" 
                 className="mobile-auth-link primary"
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMobileMenu();
+                }}
               >
                 Get Started
               </Link>

@@ -31,9 +31,20 @@ instance.interceptors.response.use(
     response => response,
     error => {
         if (error.response && error.response.status === 401) {
-            // Clear token and redirect to login
+            // Clear invalid token
             localStorage.removeItem('token');
-            window.location.href = '/login';
+            
+            // Only redirect if we're on a protected page
+            const publicPaths = ['/', '/about', '/login', '/register', '/reset-password'];
+            const currentPath = window.location.pathname;
+            
+            if (!publicPaths.includes(currentPath)) {
+                // Redirect to login for protected pages
+                window.location.href = '/login';
+            }
+            
+            // Return rejected promise without logging to console
+            return Promise.reject({ ...error, silent: true });
         }
         return Promise.reject(error);
     }

@@ -20,13 +20,22 @@ function NotificationBell({ isLoggedIn }) {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       const response = await axios.get(`${API_URL}/user/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(response.data);
       setUnreadCount(response.data.filter(n => !n.read).length);
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      // Clear invalid token on 401
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+      } else {
+        console.error('Failed to fetch notifications:', error);
+      }
     } finally {
       setLoading(false);
     }

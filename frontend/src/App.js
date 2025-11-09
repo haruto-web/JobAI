@@ -17,6 +17,7 @@ import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ChatBot from './components/ChatBot';
 import './App.css';
+import './responsive.css';
 
 // const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
@@ -66,11 +67,15 @@ function App() {
   const handleLogout = async () => {
     try {
       await api.post('/logout');
+    } catch (error) {
+      // Ignore 401 errors on logout - token is already invalid
+      if (error.response?.status !== 401) {
+        console.error('Logout failed:', error);
+      }
+    } finally {
       localStorage.removeItem('token');
       setIsLoggedIn(false);
       setUser(null);
-    } catch (error) {
-      console.error('Logout failed:', error);
     }
   };
 

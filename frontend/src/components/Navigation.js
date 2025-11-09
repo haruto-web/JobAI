@@ -5,7 +5,6 @@ import './Navigation.css';
 
 function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false); // New state for admin dropdown
   const location = useLocation();
 
   const toggleMobileMenu = () => {
@@ -14,10 +13,7 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
-    setIsAdminDropdownOpen(false); // Close dropdown when mobile menu closes
   };
-
-  // Removed unused toggleAdminDropdown function
 
   const isActive = (path) => {
     return location.pathname === path;

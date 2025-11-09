@@ -94,20 +94,26 @@
   align-items: center;
 }
 
+.password-input-container input {
+  padding-right: 60px;
+}
+
 .password-toggle {
   position: absolute;
   right: 12px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  font-size: 18px;
-  color: #718096;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #667eea;
+  font-weight: 600;
   transition: color 0.2s ease;
+  border-radius: 4px;
 }
 
 .password-toggle:hover {
-  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
 }
 
 .user-type-selector {

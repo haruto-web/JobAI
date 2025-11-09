@@ -102,8 +102,15 @@ function Dashboard() {
       fetchDashboard();
     } catch (error) {
       console.error('Failed to update job:', error);
-      const errorMsg = error.response?.data?.message || error.response?.data?.errors || 'Failed to update job. Please try again.';
-      alert(typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : errorMsg);
+      console.log('Error response:', error.response?.data);
+      const errorData = error.response?.data;
+      let errorMsg = 'Failed to update job. Please try again.';
+      if (errorData?.errors) {
+        errorMsg = Object.values(errorData.errors).flat().join('\n');
+      } else if (errorData?.message) {
+        errorMsg = errorData.message;
+      }
+      alert(errorMsg);
     } finally {
       setCreatingJob(false);
     }

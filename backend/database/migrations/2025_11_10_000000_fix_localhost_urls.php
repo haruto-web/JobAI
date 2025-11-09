@@ -7,7 +7,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::table('user_profiles')
+        DB::table('users')
             ->where('profile_image', 'like', 'http://localhost:8000%')
             ->update([
                 'profile_image' => DB::raw("REPLACE(profile_image, 'http://localhost:8000', 'https://jobai-production-0b94.up.railway.app')")

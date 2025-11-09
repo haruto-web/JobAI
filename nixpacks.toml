@@ -1,12 +1,11 @@
 [phases.setup]
 nixPkgs = ['php82', 'php82Packages.composer']
-nixpkgsArchive = 'ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7'
 
 [phases.install]
-cmds = ['composer install --no-dev --optimize-autoloader']
+cmds = ['cd backend', 'composer install --no-dev --optimize-autoloader']
 
 [phases.build]
-cmds = ['php artisan config:cache', 'php artisan route:cache']
+cmds = ['cd backend', 'php artisan config:cache', 'php artisan route:cache']
 
 [start]
-cmd = 'php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT'
+cmd = 'cd backend && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT'

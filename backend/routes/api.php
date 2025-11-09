@@ -6,6 +6,11 @@ use App\Http\Controllers\Api\{
 };
 use Illuminate\Support\Facades\Route;
 
+// ---------------- Health Check ----------------
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok']);
+});
+
 // ---------------- Public Routes ----------------
 Route::post('login', [AuthController::class, 'login']);
 Route::post('register', [AuthController::class, 'register']);

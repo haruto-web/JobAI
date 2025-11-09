@@ -131,7 +131,8 @@ function Dashboard() {
 
   useEffect(() => {
     fetchDashboard();
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleApplicationAction = async (applicationId, status) => {
     try {

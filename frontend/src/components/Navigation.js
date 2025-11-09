@@ -17,9 +17,7 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
     setIsAdminDropdownOpen(false); // Close dropdown when mobile menu closes
   };
 
-  const toggleAdminDropdown = () => {
-    setIsAdminDropdownOpen(!isAdminDropdownOpen);
-  };
+  // Removed unused toggleAdminDropdown function
 
   const isActive = (path) => {
     return location.pathname === path;

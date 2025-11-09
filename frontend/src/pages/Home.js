@@ -45,6 +45,7 @@ function Home() {
 
     fetchUrgentJobs();
     fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleApply = async (jobId) => {

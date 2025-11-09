@@ -13,10 +13,6 @@ function Jobs() {
   const [applying, setApplying] = useState(null);
   const [user, setUser] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-
-  const [replacingIndex, setReplacingIndex] = useState(null);
-  const [replacingFile, setReplacingFile] = useState(null);
 
   // Job creation states for employers
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -103,83 +99,7 @@ function Jobs() {
     }
   };
 
-  const handleAddResume = async () => {
-    if (!selectedFile) return;
-
-    setUploading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('resume', selectedFile);
-      formData.append('action', 'add');
-
-      const response = await axios.post(`${API_URL}/user/resume`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setUser(response.data);
-      setSelectedFile(null);
-      alert('Resume added successfully!');
-      // Redirect to Account page after successful upload
-      window.location.href = '/account';
-    } catch (error) {
-      console.error('Failed to add resume:', error);
-      alert('Failed to add resume. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-
-
-  const handleReplaceResume = async (index) => {
-    if (!replacingFile) return;
-
-    setUploading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('action', 'replace');
-      formData.append('index', index);
-      formData.append('resume', replacingFile);
-
-      const response = await axios.post(`${API_URL}/user/resume`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setUser(response.data);
-      setReplacingIndex(null);
-      setReplacingFile(null);
-      alert('Resume replaced successfully!');
-    } catch (error) {
-      console.error('Failed to replace resume:', error);
-      alert('Failed to replace resume. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteResume = async (index) => {
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('action', 'delete');
-      formData.append('index', index);
-
-      const response = await axios.post(`${API_URL}/user/resume`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setUser(response.data);
-      alert('Resume deleted successfully!');
-    } catch (error) {
-      console.error('Failed to delete resume:', error);
-      alert('Failed to delete resume. Please try again.');
-    }
-  };
+  // Removed unused resume management functions - moved to Account page
 
   const handleCreateJob = async () => {
     if (!jobForm.title.trim() || !jobForm.company.trim() || !jobForm.location.trim()) return;

@@ -116,6 +116,7 @@ function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -123,6 +124,7 @@ function AdminDashboard() {
     if (activeTab === 'jobs') fetchJobs();
     if (activeTab === 'applications') fetchApplications();
     if (activeTab === 'payments') fetchPayments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   if (loading) {

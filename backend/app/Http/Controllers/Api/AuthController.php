@@ -186,12 +186,14 @@ class AuthController extends Controller
 
         // Delete old image if exists
         if ($user->getAttribute('profile_image')) {
-            Storage::disk('public')->delete($user->getAttribute('profile_image'));
+            $oldPath = str_replace(config('app.url') . '/storage/', '', $user->getAttribute('profile_image'));
+            Storage::disk('public')->delete($oldPath);
         }
 
         $path = $request->file('profile_image')->store('avatars', 'public');
+        $fullUrl = config('app.url') . '/storage/' . $path;
 
-        $user->setAttribute('profile_image', $path);
+        $user->setAttribute('profile_image', $fullUrl);
         $user->save();
 
         return response()->json($user);

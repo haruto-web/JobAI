@@ -698,6 +698,12 @@
   .trends-chart {
     height: 150px;
     padding: var(--space-md);
+    overflow-x: auto;
+    min-width: 100%;
+  }
+
+  .trend-bar {
+    min-width: 60px;
   }
 
   .trend-date {

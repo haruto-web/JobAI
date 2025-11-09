@@ -85,16 +85,21 @@ function Dashboard() {
     e.preventDefault();
     if (!editingJob) return;
 
-    setCreatingJob(true); // Re-using creatingJob state for loading
+    setCreatingJob(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${API_URL}/jobs/${editingJob.id}`, editingJob, {
+      const jobData = {
+        ...editingJob,
+        salary: editingJob.salary ? parseFloat(editingJob.salary) : null,
+        requirements: editingJob.requirements || []
+      };
+      await axios.put(`${API_URL}/jobs/${editingJob.id}`, jobData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('Job updated successfully!');
       setShowEditModal(false);
       setEditingJob(null);
-      fetchDashboard(); // Refresh dashboard data
+      fetchDashboard();
     } catch (error) {
       console.error('Failed to update job:', error);
       const errorMsg = error.response?.data?.message || error.response?.data?.errors || 'Failed to update job. Please try again.';

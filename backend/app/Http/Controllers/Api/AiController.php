@@ -754,7 +754,7 @@ class AiController extends Controller
     private function finalizeJobPosting($user, $data, $sessionKey)
     {
         try {
-            // Create the job
+            // Create the job with pending_approval status
             $job = Job::create([
                 'title' => $data['title'],
                 'location' => $data['location'],
@@ -762,17 +762,45 @@ class AiController extends Controller
                 'summary' => $data['summary'],
                 'description' => $data['description'],
                 'salary' => is_numeric($data['salary']) ? (float) $data['salary'] : null,
-                'company' => $user->name ?? 'Company', // Use user's name as company or default
+                'company' => $user->name ?? 'Company',
                 'user_id' => $user->id,
-                'status' => 'approved',
-                'requirements' => [], // Can be expanded later
+                'status' => 'pending_approval',
+                'requirements' => [],
+            ]);
+
+            // Notify admin of new job awaiting approval
+            $admins = \App\Models\User::where('user_type', 'admin')->get();
+            foreach ($admins as $admin) {
+                \App\Models\Notification::create([
+                    'user_id' => $admin->id,
+                    'type' => 'job_awaiting_approval',
+                    'title' => 'New Job Awaiting Approval',
+                    'message' => "A new job post from {$user->name} is awaiting approval.",
+                    'data' => [
+                        'job_id' => $job->id,
+                        'job_title' => $job->title,
+                        'employer_name' => $user->name,
+                    ]
+                ]);
+            }
+
+            // Notify employer that job is pending approval
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'type' => 'job_pending_approval',
+                'title' => 'Job Submitted for Approval',
+                'message' => "Your job '{$data['title']}' has been submitted and is awaiting admin approval.",
+                'data' => [
+                    'job_id' => $job->id,
+                    'job_title' => $job->title,
+                ]
             ]);
 
             // Clear the session
             Cache::forget($sessionKey);
 
-            $response = "🎉 Job posted successfully! Your job '{$data['title']}' is now live and visible to job seekers.\n\n";
-            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+            $response = "🎉 Job submitted successfully! Your job '{$data['title']}' is now awaiting admin approval.\n\n";
+            $response .= "You'll be notified once it's approved. You can view and manage this job in your employer dashboard under 'My Job Posts'.";
 
             // Save bot response
             ChatMessage::create([
@@ -855,22 +883,50 @@ class AiController extends Controller
     private function createJobDirectly($parsedDetails, $user)
     {
         try {
-            // Create the job with parsed details
+            // Create the job with pending_approval status
             $job = Job::create([
                 'title' => $parsedDetails['job'],
                 'location' => $parsedDetails['location'],
                 'type' => $parsedDetails['type'] ?? 'full-time',
-                'summary' => 'Job created via AI chat', // Default summary
-                'description' => 'Job description to be updated by employer.', // Default description
+                'summary' => 'Job created via AI chat',
+                'description' => 'Job description to be updated by employer.',
                 'salary' => is_numeric($parsedDetails['salary']) ? (float) $parsedDetails['salary'] : null,
                 'company' => $parsedDetails['company'] ?? $user->name ?? 'Company',
                 'user_id' => $user->id,
-                'status' => 'approved',
+                'status' => 'pending_approval',
                 'requirements' => [],
             ]);
 
-            $response = "🎉 Job posted successfully! Your job '{$parsedDetails['job']}' is now live and visible to job seekers.\n\n";
-            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+            // Notify admin of new job awaiting approval
+            $admins = \App\Models\User::where('user_type', 'admin')->get();
+            foreach ($admins as $admin) {
+                \App\Models\Notification::create([
+                    'user_id' => $admin->id,
+                    'type' => 'job_awaiting_approval',
+                    'title' => 'New Job Awaiting Approval',
+                    'message' => "A new job post from {$user->name} is awaiting approval.",
+                    'data' => [
+                        'job_id' => $job->id,
+                        'job_title' => $job->title,
+                        'employer_name' => $user->name,
+                    ]
+                ]);
+            }
+
+            // Notify employer that job is pending approval
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'type' => 'job_pending_approval',
+                'title' => 'Job Submitted for Approval',
+                'message' => "Your job '{$parsedDetails['job']}' has been submitted and is awaiting admin approval.",
+                'data' => [
+                    'job_id' => $job->id,
+                    'job_title' => $job->title,
+                ]
+            ]);
+
+            $response = "🎉 Job submitted successfully! Your job '{$parsedDetails['job']}' is now awaiting admin approval.\n\n";
+            $response .= "You'll be notified once it's approved. You can view and manage this job in your employer dashboard under 'My Job Posts'.";
 
             // Save bot response
             ChatMessage::create([
@@ -916,7 +972,7 @@ class AiController extends Controller
 
         try {
             if ($action === 'approve') {
-                // Create the job
+                // Create the job with pending_approval status
                 $job = Job::create([
                     'title' => $jobDraft['title'],
                     'location' => $jobDraft['location'] ?? '',
@@ -926,12 +982,40 @@ class AiController extends Controller
                     'salary' => is_numeric($jobDraft['salary']) ? (float) $jobDraft['salary'] : null,
                     'company' => $user->name ?? 'Company',
                     'user_id' => $user->id,
-                    'status' => 'approved',
+                    'status' => 'pending_approval',
                     'requirements' => [],
                 ]);
 
-                $response = "🎉 Job posted successfully! Your job '{$jobDraft['title']}' is now live and visible to job seekers.\n\n";
-                $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+                // Notify admin of new job awaiting approval
+                $admins = \App\Models\User::where('user_type', 'admin')->get();
+                foreach ($admins as $admin) {
+                    \App\Models\Notification::create([
+                        'user_id' => $admin->id,
+                        'type' => 'job_awaiting_approval',
+                        'title' => 'New Job Awaiting Approval',
+                        'message' => "A new job post from {$user->name} is awaiting approval.",
+                        'data' => [
+                            'job_id' => $job->id,
+                            'job_title' => $job->title,
+                            'employer_name' => $user->name,
+                        ]
+                    ]);
+                }
+
+                // Notify employer that job is pending approval
+                \App\Models\Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'job_pending_approval',
+                    'title' => 'Job Submitted for Approval',
+                    'message' => "Your job '{$jobDraft['title']}' has been submitted and is awaiting admin approval.",
+                    'data' => [
+                        'job_id' => $job->id,
+                        'job_title' => $job->title,
+                    ]
+                ]);
+
+                $response = "🎉 Job submitted successfully! Your job '{$jobDraft['title']}' is now awaiting admin approval.\n\n";
+                $response .= "You'll be notified once it's approved. You can view and manage this job in your employer dashboard under 'My Job Posts'.";
 
             } elseif ($action === 'edit') {
                 // For edit, we need to ask which field to update

@@ -222,8 +222,16 @@ class AuthController extends Controller
 
             return response()->json($user);
         } catch (\Exception $e) {
-            Log::error('Cloudinary upload failed: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to upload image: ' . $e->getMessage()], 500);
+            Log::error('Cloudinary upload failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'cloud_name' => config('cloudinary.cloud_url'),
+            ]);
+            return response()->json([
+                'message' => 'Failed to upload image',
+                'error' => $e->getMessage(),
+                'debug' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
         }
     }
 

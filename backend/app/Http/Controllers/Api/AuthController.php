@@ -40,15 +40,18 @@ class AuthController extends Controller
                 ]
             );
 
+            $resetUrl = (config('app.frontend_url') ?: env('FRONTEND_URL', 'http://localhost:3000')) . '/reset-password?token=' . $token . '&email=' . urlencode($validated['email']);
+
+            // Send email
+            $user = User::where('email', $validated['email'])->first();
+            \Mail::to($user->email)->send(new \App\Mail\PasswordReset($user, $token, $resetUrl));
+
             return response()->json([
-                'message' => 'Password reset token generated.',
-                'email' => $validated['email'],
-                'token' => $token,
-                'reset_url' => config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($validated['email'])
+                'message' => 'Password reset link has been sent to your email.',
             ]);
         } catch (\Exception $e) {
             Log::error('Password reset failed: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to generate reset token.'], 500);
+            return response()->json(['message' => 'Failed to send reset email.'], 500);
         }
     }
 

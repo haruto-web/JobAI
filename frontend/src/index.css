@@ -1,37 +1,39 @@
 :root {
-  /* Modern Color Palette - High Contrast */
-  --primary-purple: #667eea;
-  --primary-blue: #764ba2;
-  --secondary-gray: #4a5568;
-  --text-dark: #1a202c;
-  --text-medium: #2d3748;
-  --text-light: #4a5568;
-  --text-muted: #718096;
+  /* Vibrant Purple & Pink - Modern Color Palette */
+  --primary-purple: #8b5cf6;
+  --primary-blue: #7c3aed;
+  --secondary-pink: #ec4899;
+  --secondary-gray: #4b5563;
+  --accent-amber: #f59e0b;
+  --text-dark: #111827;
+  --text-medium: #374151;
+  --text-light: #6b7280;
+  --text-muted: #9ca3af;
   --bg-white: #ffffff;
-  --bg-gray: #f7fafc;
-  --bg-light: #f8f9fa;
+  --bg-gray: #fafafa;
+  --bg-light: #f9fafb;
   --bg-card: #ffffff;
-  --border-light: #e2e8f0;
-  --border-medium: #cbd5e0;
-  --border-dark: #a0aec0;
+  --border-light: #e5e7eb;
+  --border-medium: #d1d5db;
+  --border-dark: #9ca3af;
   
   /* Status Colors */
-  --success: #38a169;
-  --success-light: #c6f6d5;
-  --warning: #d69e2e;
-  --warning-light: #faf089;
-  --error: #e53e3e;
-  --error-light: #fed7d7;
-  --info: #3182ce;
-  --info-light: #bee3f8;
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --error: #ef4444;
+  --error-light: #fee2e2;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
   
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-secondary: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-  --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  --gradient-success: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
-  --gradient-warning: linear-gradient(135deg, #d69e2e 0%, #b7791f 100%);
-  --gradient-error: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+  --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  --gradient-secondary: linear-gradient(135deg, #fafafa 0%, #f3f4f6 100%);
+  --gradient-hero: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f472b6 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-error: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);}
   
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -252,7 +254,7 @@ code {
 
 /* Selection */
 ::selection {
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(139, 92, 246, 0.2);
   color: var(--text-dark);
 }
 

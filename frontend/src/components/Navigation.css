@@ -185,6 +185,8 @@
   padding: 8px;
   border-radius: 8px;
   transition: background 0.3s ease;
+  z-index: 1001;
+  position: relative;
 }
 
 .mobile-menu-btn:hover {

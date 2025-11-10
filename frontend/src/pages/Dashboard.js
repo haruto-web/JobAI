@@ -691,8 +691,11 @@ function Dashboard() {
               </div>
             </details>
 
-            <div className="dashboard-section">
-              <h2>Hired Workers</h2>
+            <details className="dashboard-section">
+              <summary>
+                <h2>Hired Workers</h2>
+              </summary>
+              <div className="section-content">
               {dashboardData.working_on_jobs && dashboardData.working_on_jobs.length > 0 ? (
                 <div className="working-jobs-list">
                   {dashboardData.working_on_jobs.map(app => (
@@ -706,11 +709,15 @@ function Dashboard() {
               ) : (
                 <p>No hired workers yet.</p>
               )}
-            </div>
+              </div>
+            </details>
 
-            <div className="dashboard-section">
-              <h2>Job Applications</h2>
-              <p>Total Applications: {dashboardData.total_applications}</p>
+            <details className="dashboard-section">
+              <summary>
+                <h2>Job Applications</h2>
+                <p>Total Applications: {dashboardData.total_applications}</p>
+              </summary>
+              <div className="section-content">
               {dashboardData.applications.length > 0 ? (
                 <div className="applications-list">
                   {dashboardData.applications.map(app => (
@@ -853,11 +860,15 @@ function Dashboard() {
               ) : (
                 <p>No applications yet.</p>
               )}
-            </div>
+              </div>
+            </details>
 
-            <div className="dashboard-section">
-              <h2>Payments & Transactions</h2>
-              <p>Employer's Money: ${dashboardData.total_spent}</p>
+            <details className="dashboard-section">
+              <summary>
+                <h2>Payments & Transactions</h2>
+                <p>Employer's Money: ${dashboardData.total_spent}</p>
+              </summary>
+              <div className="section-content">
               <div className="money-actions">
                 <button
                   className="action-btn add-money"
@@ -891,7 +902,8 @@ function Dashboard() {
               ) : (
                 <p>No transactions yet.</p>
               )}
-            </div>
+              </div>
+            </details>
           </div>
         )}
       </section>

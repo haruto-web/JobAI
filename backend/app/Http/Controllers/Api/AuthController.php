@@ -209,17 +209,22 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // Upload to Cloudinary
-        $uploadedFile = $request->file('profile_image');
-        $result = cloudinary()->upload($uploadedFile->getRealPath(), [
-            'folder' => 'job-ai/avatars',
-            'public_id' => 'user_' . $user->id . '_' . time(),
-        ]);
+        try {
+            // Upload to Cloudinary
+            $uploadedFile = $request->file('profile_image');
+            $result = cloudinary()->upload($uploadedFile->getRealPath(), [
+                'folder' => 'job-ai/avatars',
+                'public_id' => 'user_' . $user->id . '_' . time(),
+            ]);
 
-        $user->setAttribute('profile_image', $result->getSecurePath());
-        $user->save();
+            $user->setAttribute('profile_image', $result->getSecurePath());
+            $user->save();
 
-        return response()->json($user);
+            return response()->json($user);
+        } catch (\Exception $e) {
+            Log::error('Cloudinary upload failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to upload image: ' . $e->getMessage()], 500);
+        }
     }
 
     public function user(Request $request)

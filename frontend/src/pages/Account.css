@@ -20,13 +20,13 @@
 .account-hero h1 {
   font-size: 2.5rem;
   margin-bottom: var(--space-md);
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-weight: 700;
 }
 
 .account-hero p {
   font-size: 1.25rem;
-  color: var(--text-light);
+  color: #FFFFFF;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -88,13 +88,13 @@
 
 .profile-info h2 {
   margin-bottom: var(--space-sm);
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-size: 1.5rem;
   font-weight: 600;
 }
 
 .profile-info p {
-  color: var(--text-light);
+  color: #FFFFFF;
   font-size: 1rem;
   margin: 0;
 }
@@ -131,7 +131,7 @@
 }
 
 .selected-file-text {
-  color: var(--text-light);
+  color: #FFFFFF;
   font-size: 0.875rem;
   font-style: italic;
 }
@@ -146,7 +146,7 @@
 }
 
 .user-type-section h3 {
-  color: var(--text-dark);
+  color: #FFFFFF;
   margin-bottom: var(--space-lg);
   font-size: 1.25rem;
   font-weight: 600;
@@ -185,7 +185,7 @@
 }
 
 .user-type-desc {
-  color: var(--text-light);
+  color: #FFFFFF;
   font-size: 0.875rem;
   line-height: 1.5;
   margin: 0;
@@ -218,7 +218,7 @@
 }
 
 .profile-details h3 {
-  color: var(--text-dark);
+  color: #FFFFFF;
   margin-bottom: var(--space-lg);
   font-size: 1.25rem;
   font-weight: 600;
@@ -237,12 +237,12 @@
 }
 
 .detail-item strong {
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-weight: 600;
 }
 
 .detail-item span {
-  color: var(--text-light);
+  color: #FFFFFF;
 }
 
 /* Jobseeker/Employer Info */
@@ -257,7 +257,7 @@
 
 .jobseeker-info h3,
 .employer-info h3 {
-  color: var(--text-dark);
+  color: #FFFFFF;
   margin-bottom: var(--space-lg);
   font-size: 1.25rem;
   font-weight: 600;
@@ -265,7 +265,7 @@
 
 .jobseeker-info p,
 .employer-info p {
-  color: var(--text-light);
+  color: #FFFFFF;
   margin-bottom: var(--space-md);
 }
 
@@ -278,14 +278,14 @@
 }
 
 .user-background h4 {
-  color: var(--text-dark);
+  color: #FFFFFF;
   margin-bottom: var(--space-md);
   font-size: 1.125rem;
   font-weight: 600;
 }
 
 .user-background p {
-  color: var(--text-light);
+  color: #FFFFFF;
   margin-bottom: var(--space-sm);
 }
 
@@ -311,7 +311,7 @@
 .edit-profile-form label {
   display: block;
   margin-bottom: var(--space-sm);
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-weight: 600;
 }
 

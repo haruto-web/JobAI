@@ -44,7 +44,7 @@
 }
 
 .dashboard-section h2 {
-  color: var(--primary-blue);
+  color: #FFFFFF;
   margin-bottom: 15px;
   font-size: 1.8rem;
   font-weight: 600;
@@ -52,7 +52,7 @@
 
 .dashboard-section p {
   line-height: 1.6;
-  color: var(--text-dark);
+  color: #FFFFFF;
   margin-bottom: 20px;
 }
 
@@ -72,7 +72,7 @@
 .form-group label {
   margin-bottom: var(--space-sm);
   font-weight: 500;
-  color: var(--text-dark);
+  color: #FFFFFF;
 }
 
 .form-group input,
@@ -198,7 +198,7 @@
 .applicant-info h4,
 .applicant-info h5 {
   margin: 0 0 var(--space-sm) 0;
-  color: var(--text-dark);
+  color: #FFFFFF;
 }
 
 .email-link {
@@ -422,7 +422,7 @@
 
 .modal-content h3 {
   margin-top: 0;
-  color: var(--text-dark);
+  color: #FFFFFF;
 }
 
 .modal-actions {
@@ -434,7 +434,7 @@
 
 .cancel-btn {
   background: var(--bg-gray);
-  color: var(--text-dark);
+  color: #FFFFFF;
   border: 1px solid var(--border-medium);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-md);
@@ -497,7 +497,7 @@
 }
 
 .analytics-card h3 {
-  color: var(--text-dark);
+  color: #FFFFFF;
   margin-bottom: var(--space-sm);
   font-size: 0.875rem;
   font-weight: 600;
@@ -528,7 +528,7 @@
 }
 
 .analytics-subsection h3 {
-  color: var(--text-dark);
+  color: #FFFFFF;
   margin-bottom: var(--space-lg);
   font-size: 1.125rem;
   font-weight: 600;
@@ -553,7 +553,7 @@
 
 .job-title {
   font-weight: 600;
-  color: var(--text-dark);
+  color: #FFFFFF;
 }
 
 .app-count {
@@ -607,7 +607,7 @@
   top: -20px;
   left: 50%;
   transform: translateX(-50%);
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-size: 0.75rem;
   font-weight: 600;
   background: var(--bg-white);
@@ -650,7 +650,7 @@
 
 .activity-content p {
   margin: 0 0 var(--space-xs) 0;
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-size: 0.875rem;
   line-height: 1.4;
 }

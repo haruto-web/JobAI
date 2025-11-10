@@ -17,13 +17,13 @@
 .about-hero h1 {
   font-size: 2.5rem;
   margin-bottom: 15px;
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-weight: 700;
 }
 
 .about-hero p {
   font-size: 1.2rem;
-  color: var(--text-dark);
+  color: #FFFFFF;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -50,7 +50,7 @@
 }
 
 .about-section h2 {
-  color: var(--primary-blue);
+  color: #FFFFFF;
   margin-bottom: 15px;
   font-size: 1.8rem;
   font-weight: 600;
@@ -58,7 +58,7 @@
 
 .about-section p {
   line-height: 1.6;
-  color: var(--text-dark);
+  color: #FFFFFF;
 }
 
 .about-section ul {
@@ -68,7 +68,7 @@
 
 .about-section li {
   padding: 8px 0;
-  color: var(--text-dark);
+  color: #FFFFFF;
   position: relative;
   padding-left: 25px;
 }
@@ -102,7 +102,7 @@
 }
 
 .team-section h2 {
-  color: var(--primary-blue);
+  color: #FFFFFF;
   margin-bottom: 30px;
   font-size: 2rem;
   font-weight: 600;
@@ -136,7 +136,7 @@
 
 .team-member p {
   font-size: 1rem;
-  color: var(--text-dark);
+  color: #FFFFFF;
   font-weight: 500;
 }
 

@@ -17,6 +17,13 @@ function Account({ isLoggedIn }) {
     education_attainment: ''
   });
   const [editingProfile, setEditingProfile] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    current_password: '',
+    new_password: '',
+    new_password_confirmation: ''
+  });
+  const [passwordMessage, setPasswordMessage] = useState('');
   // AI analysis and resume management moved to the Dashboard page
 
   useEffect(() => {
@@ -86,6 +93,27 @@ function Account({ isLoggedIn }) {
     } catch (error) {
       console.error('Failed to upload image:', error);
       alert('Failed to upload profile image. Please try again.');
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordMessage('');
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/user/change-password`, passwordData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPasswordMessage('Password changed successfully!');
+      setPasswordData({ current_password: '', new_password: '', new_password_confirmation: '' });
+      setTimeout(() => {
+        setShowChangePassword(false);
+        setPasswordMessage('');
+      }, 2000);
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to change password';
+      setPasswordMessage(errorMsg);
     }
   };
 
@@ -311,8 +339,72 @@ function Account({ isLoggedIn }) {
               <p>Manage your jobs and applications in the <a href="/dashboard">Dashboard</a>.</p>
             </div>
           )}
+
+          <div className="password-section">
+            <h3>Security</h3>
+            <button onClick={() => setShowChangePassword(true)} className="change-password-btn">
+              Change Password
+            </button>
+          </div>
         </div>
       </section>
+
+      {showChangePassword && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Change Password</h3>
+              <button onClick={() => setShowChangePassword(false)} className="modal-close">×</button>
+            </div>
+            <form onSubmit={handleChangePassword}>
+              <div className="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  value={passwordData.current_password}
+                  onChange={(e) => setPasswordData({ ...passwordData, current_password: e.target.value })}
+                  required
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div className="form-group">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.new_password}
+                  onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                  required
+                  minLength="8"
+                  placeholder="Enter new password (min 8 characters)"
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.new_password_confirmation}
+                  onChange={(e) => setPasswordData({ ...passwordData, new_password_confirmation: e.target.value })}
+                  required
+                  placeholder="Confirm new password"
+                />
+              </div>
+              {passwordMessage && (
+                <div className={`message ${passwordMessage.includes('success') ? 'success' : 'error'}`}>
+                  {passwordMessage}
+                </div>
+              )}
+              <div className="modal-actions">
+                <button type="button" onClick={() => setShowChangePassword(false)} className="cancel-btn">
+                  Cancel
+                </button>
+                <button type="submit" className="save-btn">
+                  Change Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <footer className="footer">
         <p>&copy; {new Date().getFullYear()} AI-Powered Job Recommendation</p>

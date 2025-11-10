@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('user/notifications', [AuthController::class, 'getNotifications']);
     Route::put('user/notifications/{id}/read', [AuthController::class, 'markNotificationAsRead']);
     Route::put('user/notifications/read-all', [AuthController::class, 'markAllNotificationsAsRead']);
+    Route::post('user/change-password', [AuthController::class, 'changePassword']);
     Route::post('logout', [AuthController::class, 'logout']);
 
     // Jobs

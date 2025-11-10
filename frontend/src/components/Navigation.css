@@ -334,6 +334,11 @@
   
   .mobile-menu-btn {
     display: block;
+    margin-left: auto;
+  }
+  
+  .nav-container {
+    justify-content: space-between;
   }
   
   .mobile-menu {

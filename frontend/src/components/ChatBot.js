@@ -101,6 +101,26 @@ function ChatBot({ isOpen, onToggle }) {
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
+    
+    // Check if user wants to delete conversation
+    const deleteCommands = ['delete conve', 'delete conversation', 'clear chat', 'clear conversation', 'delete chat'];
+    if (deleteCommands.some(cmd => userMessage.toLowerCase().includes(cmd))) {
+      try {
+        await api.delete('/ai/chat-history');
+        const defaultMessage = userType === 'employer'
+          ? 'Hi! I\'m your AI assistant for hiring. I can help you create job postings, manage candidates, and provide hiring advice!'
+          : 'Hi! I\'m your AI career advisor. Share your skills or upload your resume to get personalized job recommendations!';
+        setMessages([{ role: 'bot', text: defaultMessage + '\n\nYour conversation has been deleted.' }]);
+        setInput('');
+        return;
+      } catch (error) {
+        console.error('Failed to delete conversation:', error);
+        setMessages(prev => [...prev, { role: 'bot', text: 'Sorry, I couldn\'t delete the conversation. Please try again.' }]);
+        setInput('');
+        return;
+      }
+    }
+
     setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
     setInput('');
     setLoading(true);
@@ -398,9 +418,10 @@ function ChatBot({ isOpen, onToggle }) {
               
       
             </p>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+            <p style={{ fontSize: '10px', color: '#666', marginBottom: '5px' }}>
               “Once you’ve created a job, you can update details like the title, description, and salary anytime in your dashboard.”
               “To cancel job creation, just say 'cancel job' or 'stop job'.”
+              “Type 'Delete chat' to clear the conversation.”
             </p>
             {jobDraft && (
               <div className="job-draft">

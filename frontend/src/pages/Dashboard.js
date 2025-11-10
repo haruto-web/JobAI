@@ -623,9 +623,12 @@ function Dashboard() {
               </form>
             </div>
 
-            <div className="dashboard-section">
-              <h2>Your Job Postings</h2>
-              <p>Active Jobs: {dashboardData.active_jobs}</p>
+            <details className="dashboard-section">
+              <summary>
+                <h2>Your Job Postings</h2>
+                <p>Active Jobs: {dashboardData.active_jobs}</p>
+              </summary>
+              <div className="section-content">
               {dashboardData.jobs.length > 0 ? (
                 <div className="jobs-list">
                   {dashboardData.jobs.map(job => (
@@ -685,7 +688,8 @@ function Dashboard() {
               ) : (
                 <p>You haven't posted any jobs yet.</p>
               )}
-            </div>
+              </div>
+            </details>
 
             <div className="dashboard-section">
               <h2>Hired Workers</h2>

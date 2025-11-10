@@ -97,8 +97,7 @@ function Home() {
               <span className="text-gradient"> AI-Powered</span> Recommendations
             </h1>
             <p className="hero-subtitle">
-              Connect with opportunities that match your skills, experience, and career goals. 
-              Our intelligent platform uses advanced AI to help you discover the perfect role.
+              Connect with opportunities that match your skills, experience, and career goals. Our intelligent platform uses advanced AI to help you discover the perfect role.
             </p>
             <div className="hero-actions">
               <Link to="/register" className="btn-primary">

@@ -257,48 +257,44 @@ function Jobs() {
           </div>
         </div>
 
-        {user && user.user_type === 'jobseeker' && (
+        {user && user.user_type === 'jobseeker' && jobs.length > 0 && (
           <div className="jobs-section">
-            <h2>Matched Jobs for You</h2>
-            <p>Jobs that match your profile based on our skill analysis.</p>
+            <h2>Recommended Jobs for You</h2>
+            <p>Jobs sorted by relevance to your profile. {user.profile?.skills?.length > 0 ? 'Based on your skills and experience.' : 'Update your profile with skills for better matches!'}</p>
             <div className="job-cards">
-              {jobs.filter(job => job.match_score && job.match_score > 0).length > 0 ? (
-                jobs.filter(job => job.match_score && job.match_score > 0).map(job => (
-                  <div
-                    key={job.id}
-                    className="job-card"
-                    onClick={() => navigate(`/job/${job.id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <h3>{job.title}</h3>
-                    <p>{job.company} - {job.location} - {job.type}</p>
-                    {job.salary && <p>Salary: ${job.salary}</p>}
-                    {job.match_score !== undefined && (
-                      <span className="match-score">{job.match_score}% match</span>
-                    )}
-                    <div style={{ marginTop: '10px' }}>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => setSelectedFile(e.target.files[0])}
-                        style={{ marginBottom: '5px', width: '100%' }}
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent navigation when clicking apply
-                          handleApply(job.id);
-                        }}
-                        disabled={applying === job.id || !selectedFile}
-                        className="apply-btn"
-                      >
-                        {applying === job.id ? 'Applying...' : 'Apply with Resume'}
-                      </button>
-                    </div>
+              {jobs.slice(0, 5).map(job => (
+                <div
+                  key={job.id}
+                  className="job-card"
+                  onClick={() => navigate(`/job/${job.id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <h3>{job.title}</h3>
+                  <p>{job.company} - {job.location} - {job.type}</p>
+                  {job.salary && <p>Salary: ${job.salary}</p>}
+                  {job.match_score !== undefined && job.match_score > 0 && (
+                    <span className="match-score">{job.match_score}% match</span>
+                  )}
+                  <div style={{ marginTop: '10px' }}>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setSelectedFile(e.target.files[0])}
+                      style={{ marginBottom: '5px', width: '100%' }}
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApply(job.id);
+                      }}
+                      disabled={applying === job.id || !selectedFile}
+                      className="apply-btn"
+                    >
+                      {applying === job.id ? 'Applying...' : 'Apply with Resume'}
+                    </button>
                   </div>
-                ))
-              ) : (
-                <p>No matched jobs available. Upload a resume to get personalized matches.</p>
-              )}
+                </div>
+              ))}
             </div>
           </div>
         )}

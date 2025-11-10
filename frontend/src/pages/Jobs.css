@@ -244,5 +244,26 @@
 
   .job-cards {
     grid-template-columns: 1fr;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 5px;
+  }
+
+  .job-cards::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .job-cards::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+
+  .job-cards::-webkit-scrollbar-thumb {
+    background: #38BDF8;
+    border-radius: 3px;
+  }
+
+  .job-cards::-webkit-scrollbar-thumb:hover {
+    background: #0EA5E9;
   }
 }

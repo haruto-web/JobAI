@@ -1,39 +1,40 @@
 :root {
-  /* Vibrant Purple & Pink - Modern Color Palette */
-  --primary-purple: #8b5cf6;
-  --primary-blue: #7c3aed;
-  --secondary-pink: #ec4899;
-  --secondary-gray: #4b5563;
-  --accent-amber: #f59e0b;
-  --text-dark: #111827;
-  --text-medium: #374151;
-  --text-light: #6b7280;
-  --text-muted: #9ca3af;
+  /* Deep Navy & Coral - Premium Color Palette */
+  --primary-purple: #1e3a8a;
+  --primary-blue: #1e40af;
+  --secondary-pink: #f97316;
+  --secondary-gray: #475569;
+  --accent-amber: #06b6d4;
+  --text-dark: #0f172a;
+  --text-medium: #334155;
+  --text-light: #64748b;
+  --text-muted: #94a3b8;
   --bg-white: #ffffff;
-  --bg-gray: #fafafa;
-  --bg-light: #f9fafb;
+  --bg-gray: #f8fafc;
+  --bg-light: #f1f5f9;
   --bg-card: #ffffff;
-  --border-light: #e5e7eb;
-  --border-medium: #d1d5db;
-  --border-dark: #9ca3af;
+  --border-light: #e2e8f0;
+  --border-medium: #cbd5e1;
+  --border-dark: #94a3b8;
   
   /* Status Colors */
-  --success: #10b981;
-  --success-light: #d1fae5;
+  --success: #22c55e;
+  --success-light: #dcfce7;
   --warning: #f59e0b;
   --warning-light: #fef3c7;
   --error: #ef4444;
   --error-light: #fee2e2;
-  --info: #3b82f6;
-  --info-light: #dbeafe;
+  --info: #06b6d4;
+  --info-light: #cffafe;
   
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
-  --gradient-secondary: linear-gradient(135deg, #fafafa 0%, #f3f4f6 100%);
-  --gradient-hero: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f472b6 100%);
-  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-primary: linear-gradient(135deg, #1e3a8a 0%, #f97316 100%);
+  --gradient-secondary: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  --gradient-hero: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #06b6d4 100%);
+  --gradient-success: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   --gradient-error: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+
   
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -254,7 +255,7 @@ code {
 
 /* Selection */
 ::selection {
-  background: rgba(139, 92, 246, 0.2);
+  background: rgba(30, 58, 138, 0.2);
   color: var(--text-dark);
 }
 

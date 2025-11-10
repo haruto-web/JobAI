@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './Auth.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+
 function Register({ onRegister }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -106,7 +108,7 @@ function Register({ onRegister }) {
               aria-label="Continue with Google"
               onClick={() => {
                 // Open OAuth flow in a popup and listen for the result via postMessage
-                const oauthUrl = 'http://localhost:8000/auth/google';
+                const oauthUrl = `${API_URL.replace('/api', '')}/auth/google`;
                 const width = 520;
                 const height = 600;
                 const left = window.screenX + (window.outerWidth - width) / 2;

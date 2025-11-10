@@ -42,21 +42,24 @@ class GoogleController extends Controller
 
             $user = User::where('email', $googleUser->getEmail())->first();
 
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            
             if ($user) {
                 // User exists, log in
                 $token = $user->createToken('google-login')->plainTextToken;
                 // Redirect to frontend oauth completion page which will postMessage back to opener or handle direct redirect
-                return redirect("http://localhost:3000/oauth/complete?token=$token");
+                return redirect("{$frontendUrl}/oauth/complete?token=$token");
             } else {
                 // User does not exist, redirect to frontend oauth completion page with profile details
                 $email = urlencode($googleUser->getEmail());
                 $name = urlencode($googleUser->getName());
                 $avatar = urlencode($googleUser->getAvatar());
-                return redirect("http://localhost:3000/oauth/complete?email={$email}&name={$name}&avatar={$avatar}&provider=google");
+                return redirect("{$frontendUrl}/oauth/complete?email={$email}&name={$name}&avatar={$avatar}&provider=google");
             }
 
         } catch (\Exception $e) {
-            return redirect("http://localhost:3000/login?error=google_auth_failed");
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect("{$frontendUrl}/login?error=google_auth_failed");
         }
     }
 }

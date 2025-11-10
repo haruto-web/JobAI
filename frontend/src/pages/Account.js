@@ -92,7 +92,9 @@ function Account({ isLoggedIn }) {
       window.location.reload();
     } catch (error) {
       console.error('Failed to upload image:', error);
-      alert('Failed to upload profile image. Please try again.');
+      console.error('Error response:', error.response?.data);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Failed to upload profile image';
+      alert(errorMsg);
     }
   };
 

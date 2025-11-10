@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Cloudinary\Cloudinary;
 use App\Services\OpenAIService;
 use App\Services\ResumeParserService;
 
@@ -215,20 +216,23 @@ class AuthController extends Controller
                 throw new \Exception('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_KEY, and CLOUDINARY_SECRET environment variables.');
             }
 
-            // Upload to Cloudinary
+            // Upload to Cloudinary using SDK directly
             $uploadedFile = $request->file('profile_image');
-            $cloudinary = cloudinary();
             
-            if (!$cloudinary) {
-                throw new \Exception('Cloudinary service is not available');
-            }
+            $cloudinary = new Cloudinary([
+                'cloud' => [
+                    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                    'api_key' => env('CLOUDINARY_KEY'),
+                    'api_secret' => env('CLOUDINARY_SECRET'),
+                ],
+            ]);
             
-            $result = $cloudinary->upload($uploadedFile->getRealPath(), [
+            $result = $cloudinary->uploadApi()->upload($uploadedFile->getRealPath(), [
                 'folder' => 'job-ai/avatars',
                 'public_id' => 'user_' . $user->id . '_' . time(),
             ]);
 
-            $user->setAttribute('profile_image', $result->getSecurePath());
+            $user->setAttribute('profile_image', $result['secure_url']);
             $user->save();
 
             return response()->json($user);

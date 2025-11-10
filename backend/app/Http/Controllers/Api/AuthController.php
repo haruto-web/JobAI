@@ -163,7 +163,19 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        
+        // Schedule chat messages deletion after 2 minutes
+        \Illuminate\Support\Facades\Cache::put(
+            'delete_chat_messages_' . $user->id,
+            true,
+            now()->addMinutes(2)
+        );
+        
+        // Delete chat messages after 2 minutes using a job
+        \App\Jobs\DeleteChatMessages::dispatch($user->id)->delay(now()->addMinutes(2));
+        
+        $user->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out']);
     }

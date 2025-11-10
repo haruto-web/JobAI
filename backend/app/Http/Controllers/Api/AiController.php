@@ -417,7 +417,7 @@ class AiController extends Controller
         $messageLower = strtolower($message);
         $isEmployer = $user->user_type === 'employer';
 
-        // Job Search & Matching - Different for employers vs job seekers
+        // Job Search & Matching
         if (str_contains($messageLower, 'what jobs') || str_contains($messageLower, 'available for me') ||
             str_contains($messageLower, 'show me') && str_contains($messageLower, 'jobs') ||
             str_contains($messageLower, 'part-time') || str_contains($messageLower, 'remote') ||
@@ -425,7 +425,11 @@ class AiController extends Controller
             str_contains($messageLower, 'jobs')) {
 
             if ($isEmployer) {
-                return "As an employer, you can create job postings to attract candidates. Would you like me to help you create a job posting? Just tell me details like the position, requirements, and salary range.";
+                return "🏢 **For Employers:**\n\nYou can create job postings to attract top talent! I can help you:\n" .
+                       "• Create a professional job posting\n" .
+                       "• Write compelling job descriptions\n" .
+                       "• Set competitive salary ranges\n\n" .
+                       "Just say 'create a job' and I'll guide you through the process!";
             }
 
             // Job seeker logic
@@ -433,7 +437,6 @@ class AiController extends Controller
             $hasSkills = $profile && is_array($profile->skills) && count($profile->skills) > 0;
             if ($hasSkills) {
                 $skills = $profile->skills;
-                // Use local job matching to suggest jobs
                 $jobs = Job::where('status', 'approved')->get();
                 $skillsLower = array_map(fn($s) => strtolower($s), $skills);
                 $scored = [];
@@ -457,23 +460,44 @@ class AiController extends Controller
                 usort($scored, fn($a, $b) => $b['confidence'] <=> $a['confidence']);
                 $suggestions = array_slice($scored, 0, 3);
                 if (!empty($suggestions)) {
-                    $response = "Based on your skills (" . implode(', ', $skills) . "), here are some job suggestions:\n\n";
-                    foreach ($suggestions as $job) {
-                        $response .= "• <a href=\"/job/" . $job['job_id'] . "\">" . $job['title'] . "</a> (Match: " . $job['confidence'] . "%)\n  " . $job['description'] . "\n\n";
+                    $response = "🎯 **Perfect Matches for You!**\n\nBased on your skills (" . implode(', ', array_slice($skills, 0, 5)) . (count($skills) > 5 ? '...' : '') . "), here are top opportunities:\n\n";
+                    foreach ($suggestions as $idx => $job) {
+                        $response .= ($idx + 1) . ". <a href=\"/job/" . $job['job_id'] . "\">" . $job['title'] . "</a> - " . $job['confidence'] . "% match\n   " . $job['description'] . "\n\n";
                     }
-                    $response .= "Would you like me to help you apply to any of these jobs or provide more details?";
+                    $response .= "💡 **Next Steps:**\n• Click any job to view full details\n• Upload your resume for even better matches\n• Visit the Jobs page to see all openings";
                     return $response;
                 } else {
-                    return "I couldn't find any strong matches for your current skills. Try updating your profile with more specific skills or upload your resume for better suggestions!";
+                    return "🔍 **No Perfect Matches Yet**\n\nI couldn't find jobs matching your current skills, but don't worry!\n\n" .
+                           "**Here's what you can do:**\n" .
+                           "1. 📝 Update your profile with more specific skills\n" .
+                           "2. 📄 Upload your resume for AI-powered matching\n" .
+                           "3. 🌐 Browse all jobs on our <a href=\"/jobs\">Jobs page</a>\n\n" .
+                           "Would you like help improving your profile?";
                 }
             } else {
-                return "To get personalized job suggestions, please update your profile with your skills or upload your resume. You can do this in your profile section!";
+                return "👋 **Let's Get You Started!**\n\nTo find your perfect job match, I need to know your skills.\n\n" .
+                       "**Quick Options:**\n" .
+                       "1. 📝 Type your skills below (e.g., 'JavaScript, React, Node.js')\n" .
+                       "2. 📄 Upload your resume for instant analysis\n" .
+                       "3. ✏️ Update your profile in the Account page\n\n" .
+                       "What works best for you?";
             }
         }
         // Application Help
         elseif (str_contains($messageLower, 'how do i apply') || str_contains($messageLower, 'upload') && str_contains($messageLower, 'résumé') ||
                 str_contains($messageLower, 'cover letter') || str_contains($messageLower, 'application')) {
-            return "To apply for jobs, visit our job listings page and click 'Apply' on any position that interests you. You can upload your resume and fill out the application form. For cover letters, highlight why you're a great fit for the role!";
+            return "💼 **How to Apply for Jobs**\n\n" .
+                   "**Step-by-Step:**\n" .
+                   "1. 🔍 Browse jobs on our <a href=\"/jobs\">Jobs page</a>\n" .
+                   "2. 👁️ Click any job to view full details\n" .
+                   "3. 📄 Upload your resume when applying\n" .
+                   "4. ✅ Submit your application\n\n" .
+                   "**Cover Letter Tips:**\n" .
+                   "• Address the hiring manager by name if possible\n" .
+                   "• Explain why you're excited about this specific role\n" .
+                   "• Highlight 2-3 relevant achievements\n" .
+                   "• Keep it concise (3-4 paragraphs max)\n\n" .
+                   "Need help with your resume? Just ask!";
         }
         // Company Information
         elseif (str_contains($messageLower, 'work at') || str_contains($messageLower, 'company') ||
@@ -484,12 +508,40 @@ class AiController extends Controller
         // Interview Assistance
         elseif (str_contains($messageLower, 'interview') || str_contains($messageLower, 'prepare for') ||
                 str_contains($messageLower, 'questions might') || str_contains($messageLower, 'they ask')) {
-            return "Interview prep is key! Practice common questions like 'Tell me about yourself' and 'Why do you want this job.' Research the company and prepare questions for them. I can help you practice specific scenarios!";
+            return "🎯 **Interview Preparation Guide**\n\n" .
+                   "**Common Questions to Practice:**\n" .
+                   "1. Tell me about yourself\n" .
+                   "2. Why do you want this job?\n" .
+                   "3. What are your strengths/weaknesses?\n" .
+                   "4. Where do you see yourself in 5 years?\n" .
+                   "5. Why should we hire you?\n\n" .
+                   "**Before the Interview:**\n" .
+                   "• 🔍 Research the company thoroughly\n" .
+                   "• 📝 Prepare 3-5 questions to ask them\n" .
+                   "• 👔 Choose professional attire\n" .
+                   "• 📍 Know the location/login details\n\n" .
+                   "**During the Interview:**\n" .
+                   "• Arrive 10-15 minutes early\n" .
+                   "• Make eye contact and smile\n" .
+                   "• Use the STAR method (Situation, Task, Action, Result)\n" .
+                   "• Ask thoughtful questions\n\n" .
+                   "Want to practice specific scenarios? Let me know!";
         }
         // Status Updates
         elseif (str_contains($messageLower, 'application been received') || str_contains($messageLower, 'next step') ||
                 str_contains($messageLower, 'status') || str_contains($messageLower, 'update')) {
-            return "You can check your application status in your dashboard under 'My Applications'. We'll notify you of any updates via email or your notifications panel.";
+            return "📊 **Track Your Applications**\n\n" .
+                   "You can monitor all your applications in real-time!\n\n" .
+                   "**Where to Check:**\n" .
+                   "• 🏠 Visit your <a href=\"/dashboard\">Dashboard</a>\n" .
+                   "• 📧 Check your email for updates\n" .
+                   "• 🔔 View notifications in the top menu\n\n" .
+                   "**Application Stages:**\n" .
+                   "1. Submitted - Your application is received\n" .
+                   "2. Under Review - Employer is reviewing\n" .
+                   "3. Interview - You've been shortlisted!\n" .
+                   "4. Offer/Rejected - Final decision\n\n" .
+                   "We'll notify you at each stage. Good luck! 🎉";
         }
         // Resume Tips
         elseif (str_contains($messageLower, 'resume tip') || str_contains($messageLower, 'improve my resume') ||
@@ -511,16 +563,64 @@ class AiController extends Controller
                 str_contains($messageLower, 'get hired faster') || str_contains($messageLower, 'career') ||
                 str_contains($messageLower, 'advice')) {
             if ($isEmployer) {
-                return "As an employer, I can help you with hiring strategies, creating effective job descriptions, and managing your recruitment process. What specific aspect of hiring would you like assistance with?";
+                return "💼 **Employer Resources**\n\n" .
+                       "I can help you with:\n" .
+                       "• 📝 Creating effective job descriptions\n" .
+                       "• 👥 Attracting top talent\n" .
+                       "• 📊 Setting competitive salaries\n" .
+                       "• ✅ Screening candidates efficiently\n" .
+                       "• 🎯 Building your employer brand\n\n" .
+                       "What specific aspect of hiring would you like help with?";
             }
-            return "For career advice, share your skills below to get job suggestions! To improve your resume, focus on quantifiable achievements and relevant skills. Consider online courses on platforms like Coursera or Udemy to boost your employability.";
+            return "🚀 **Career Growth Tips**\n\n" .
+                   "**Get Hired Faster:**\n" .
+                   "1. 📝 Optimize your resume with keywords\n" .
+                   "2. 🔗 Build a strong LinkedIn profile\n" .
+                   "3. 🎯 Apply to 5-10 jobs daily\n" .
+                   "4. 💬 Network with industry professionals\n" .
+                   "5. 📚 Keep learning new skills\n\n" .
+                   "**Skill Development:**\n" .
+                   "• Coursera - Professional certificates\n" .
+                   "• Udemy - Affordable skill courses\n" .
+                   "• LinkedIn Learning - Business skills\n" .
+                   "• freeCodeCamp - Free coding bootcamp\n\n" .
+                   "Share your skills below for personalized job matches!";
         }
         // General fallback
         else {
             if ($isEmployer) {
-                return "I'm here to help employers with job posting creation, candidate management, hiring strategies, and company branding. What can I assist you with today?";
+                return "👋 **Welcome, Employer!**\n\n" .
+                       "I'm your AI hiring assistant. I can help you with:\n\n" .
+                       "📝 **Job Posting**\n" .
+                       "• Create professional job listings\n" .
+                       "• Write compelling descriptions\n\n" .
+                       "👥 **Candidate Management**\n" .
+                       "• Review applications\n" .
+                       "• Screen candidates\n\n" .
+                       "🎯 **Hiring Strategy**\n" .
+                       "• Set competitive salaries\n" .
+                       "• Attract top talent\n\n" .
+                       "Try saying: 'Create a job' to get started!";
             }
-            return "I'm here to help with your job search! You can ask me about finding jobs, applying for positions, interview preparation, resume tips, career advice, or check our job listings page. What would you like to know?";
+            return "👋 **Hi! I'm Your AI Career Advisor**\n\n" .
+                   "I'm here to help you land your dream job! Here's what I can do:\n\n" .
+                   "🔍 **Job Search**\n" .
+                   "• Find jobs matching your skills\n" .
+                   "• Get personalized recommendations\n\n" .
+                   "💼 **Application Help**\n" .
+                   "• Resume tips and optimization\n" .
+                   "• Cover letter guidance\n\n" .
+                   "🎯 **Interview Prep**\n" .
+                   "• Common questions practice\n" .
+                   "• Interview strategies\n\n" .
+                   "🚀 **Career Advice**\n" .
+                   "• Skill development tips\n" .
+                   "• Career growth strategies\n\n" .
+                   "**Quick Start:**\n" .
+                   "1. Type your skills for job matches\n" .
+                   "2. Upload your resume for analysis\n" .
+                   "3. Ask me anything about your job search!\n\n" .
+                   "What would you like help with today?";
         }
     }
 

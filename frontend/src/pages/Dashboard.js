@@ -436,9 +436,12 @@ function Dashboard() {
 
             {/* Analytics & Insights Section */}
             {dashboardData.analytics && (
-              <div className="dashboard-section">
-                <h2>📊 Analytics & Insights</h2>
-                <p>Get an overview of your hiring performance</p>
+              <details className="dashboard-section">
+                <summary>
+                  <h2>📊 Analytics & Insights</h2>
+                  <p>Get an overview of your hiring performance</p>
+                </summary>
+                <div className="section-content">
 
                 <div className="analytics-grid">
                   <div className="analytics-card">
@@ -515,11 +518,15 @@ function Dashboard() {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              </details>
             )}
 
-            <div className="dashboard-section">
-              <h2>Create New Job</h2>
+            <details className="dashboard-section">
+              <summary>
+                <h2>Create New Job</h2>
+              </summary>
+              <div className="section-content">
               <form onSubmit={handleCreateJob} className="job-form">
                 <div className="form-group">
                   <label htmlFor="title">Job Title</label>
@@ -621,7 +628,8 @@ function Dashboard() {
                   {creatingJob ? 'Creating...' : 'Create Job'}
                 </button>
               </form>
-            </div>
+              </div>
+            </details>
 
             <details className="dashboard-section">
               <summary>

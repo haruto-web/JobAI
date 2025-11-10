@@ -412,6 +412,22 @@ class AiController extends Controller
         return response()->json(['messages' => $messages]);
     }
 
+    public function deleteChatHistory(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        ChatMessage::where('user_id', $user->id)->delete();
+        
+        // Also clear any job creation session
+        $sessionKey = "job_creation_{$user->id}";
+        Cache::forget($sessionKey);
+
+        return response()->json(['message' => 'Chat history deleted successfully']);
+    }
+
     private function generateFallbackResponse($message, $user)
     {
         $messageLower = strtolower($message);

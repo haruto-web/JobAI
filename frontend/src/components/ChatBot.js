@@ -422,7 +422,7 @@ function ChatBot({ isOpen, onToggle }) {
               “Type 'Delete chat' to clear the conversation.”
             </p>
             <p style={{ fontSize: '10px', color: '#666', marginBottom: '5px', textAlign: 'justify' }}>
-              “Type 'Delete chat' to clear the conversation.”
+              “Type 'delete chat', 'clear chat' to clear the conversation.”
             </p>
             {jobDraft && (
               <div className="job-draft">

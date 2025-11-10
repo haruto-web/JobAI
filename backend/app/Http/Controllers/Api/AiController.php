@@ -491,10 +491,25 @@ class AiController extends Controller
                 str_contains($messageLower, 'status') || str_contains($messageLower, 'update')) {
             return "You can check your application status in your dashboard under 'My Applications'. We'll notify you of any updates via email or your notifications panel.";
         }
+        // Resume Tips
+        elseif (str_contains($messageLower, 'resume tip') || str_contains($messageLower, 'improve my resume') ||
+                str_contains($messageLower, 'improve my résumé') || str_contains($messageLower, 'resume advice') ||
+                str_contains($messageLower, 'cv tip') || str_contains($messageLower, 'improve my cv')) {
+            return "Here are some key resume tips:\n\n" .
+                   "1. **Keep it concise**: Aim for 1-2 pages maximum\n" .
+                   "2. **Use action verbs**: Start bullet points with words like 'Developed', 'Managed', 'Led'\n" .
+                   "3. **Quantify achievements**: Include numbers and metrics (e.g., 'Increased sales by 30%')\n" .
+                   "4. **Tailor to each job**: Customize your resume for each position\n" .
+                   "5. **Include keywords**: Use terms from the job description\n" .
+                   "6. **Proofread carefully**: No typos or grammatical errors\n" .
+                   "7. **Use a clean format**: Easy to read with clear sections\n" .
+                   "8. **Add relevant skills**: Include both technical and soft skills\n\n" .
+                   "Would you like help with any specific section of your resume?";
+        }
         // Career Advice
-        elseif (str_contains($messageLower, 'which jobs fit') || str_contains($messageLower, 'improve my résumé') ||
-                str_contains($messageLower, 'courses') || str_contains($messageLower, 'get hired faster') ||
-                str_contains($messageLower, 'career') || str_contains($messageLower, 'advice')) {
+        elseif (str_contains($messageLower, 'which jobs fit') || str_contains($messageLower, 'courses') ||
+                str_contains($messageLower, 'get hired faster') || str_contains($messageLower, 'career') ||
+                str_contains($messageLower, 'advice')) {
             if ($isEmployer) {
                 return "As an employer, I can help you with hiring strategies, creating effective job descriptions, and managing your recruitment process. What specific aspect of hiring would you like assistance with?";
             }

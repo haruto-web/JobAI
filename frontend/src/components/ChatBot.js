@@ -412,15 +412,16 @@ function ChatBot({ isOpen, onToggle }) {
 
         {userType === 'employer' && (
           <div className="chatbot-job-creation">
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px', textAlign: 'justify' }}>
               Try saying: 
               "Create a job: Job Title, Company, Location, Salary" 
-              
-      
             </p>
-            <p style={{ fontSize: '10px', color: '#666', marginBottom: '5px' }}>
+            <p style={{ fontSize: '10px', color: '#666', marginBottom: '5px', textAlign: 'justify' }}>
               “Once you’ve created a job, you can update details like the title, description, and salary anytime in your dashboard.”
               “To cancel job creation, just say 'cancel job' or 'stop job'.”
+              “Type 'Delete chat' to clear the conversation.”
+            </p>
+            <p style={{ fontSize: '10px', color: '#666', marginBottom: '5px', textAlign: 'justify' }}>
               “Type 'Delete chat' to clear the conversation.”
             </p>
             {jobDraft && (

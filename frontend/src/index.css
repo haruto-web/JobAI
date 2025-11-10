@@ -6,12 +6,12 @@
   --card-bg: #1E293B;
   
   /* Text Colors */
-  --text-primary: #F8FAFC;
-  --text-secondary: #CBD5E1;
-  --text-muted: #64748B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #FFFFFF;
+  --text-muted: #FFFFFF;
   --text-dark: #0F172A;
-  --text-medium: #CBD5E1;
-  --text-light: #CBD5E1;
+  --text-medium: #FFFFFF;
+  --text-light: #FFFFFF;
   
   /* Accent Colors */
   --primary-purple: #38BDF8;
@@ -35,7 +35,7 @@
   
   /* Navigation */
   --nav-bg: #0F172A;
-  --nav-text: #E2E8F0;
+  --nav-text: #FFFFFF;
   --nav-text-hover: #38BDF8;
   --nav-border: #334155;
   

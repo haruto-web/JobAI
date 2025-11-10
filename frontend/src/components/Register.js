@@ -35,7 +35,14 @@ function Register({ onRegister }) {
     } catch (err) {
       if (err.response && err.response.data && err.response.data.errors) {
         const errors = Object.values(err.response.data.errors).flat();
-        setError(errors.join(' '));
+        const errorMessage = errors.join(' ');
+        if (errorMessage.toLowerCase().includes('email') && (errorMessage.toLowerCase().includes('taken') || errorMessage.toLowerCase().includes('exists') || errorMessage.toLowerCase().includes('already'))) {
+          setError('This email is already registered. Please sign in or use a different email.');
+        } else {
+          setError(errorMessage);
+        }
+      } else if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
       } else {
         setError('Registration failed. Please try again.');
       }

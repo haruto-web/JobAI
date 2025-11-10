@@ -51,9 +51,8 @@ function Login({ onLogin }) {
         email: forgotPasswordEmail
       });
 
-      const { email, token, reset_url } = response.data;
       setForgotPasswordMessage(
-        `Password reset token generated!\n\nEmail: ${email}\nToken: ${token}\n\nReset URL: ${reset_url}`
+        response.data.message || 'Password reset link has been sent to your email. Please check your inbox.'
       );
     } catch (error) {
       let errorMsg = 'Failed to send reset link. Please try again.';

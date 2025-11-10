@@ -93,8 +93,7 @@ function Home() {
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="hero-title">
-              Find Your Dream Job with
-              <span className="text-gradient"> AI-Powered</span> Recommendations
+              Find Your Dream Job with <span className="text-gradient">AI-Powered</span> Recommendations
             </h1>
             <p className="hero-subtitle">
               Connect with opportunities that match your skills, experience, and career goals. Our intelligent platform uses advanced AI to help you discover the perfect role.

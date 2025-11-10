@@ -209,16 +209,14 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // Delete old image if exists
-        if ($user->getAttribute('profile_image')) {
-            $oldPath = str_replace(config('app.url') . '/storage/', '', $user->getAttribute('profile_image'));
-            Storage::disk('public')->delete($oldPath);
-        }
+        // Upload to Cloudinary
+        $uploadedFile = $request->file('profile_image');
+        $result = cloudinary()->upload($uploadedFile->getRealPath(), [
+            'folder' => 'job-ai/avatars',
+            'public_id' => 'user_' . $user->id . '_' . time(),
+        ]);
 
-        $path = $request->file('profile_image')->store('avatars', 'public');
-        $fullUrl = config('app.url') . '/storage/' . $path;
-
-        $user->setAttribute('profile_image', $fullUrl);
+        $user->setAttribute('profile_image', $result->getSecurePath());
         $user->save();
 
         return response()->json($user);

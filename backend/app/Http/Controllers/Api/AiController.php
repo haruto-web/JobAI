@@ -723,6 +723,26 @@ class AiController extends Controller
             return response()->json(['response' => $response]);
         }
 
+        // Check for cancel commands at any step
+        $messageLower = strtolower(trim($message));
+        if (str_contains($messageLower, 'cancel job') || 
+            str_contains($messageLower, 'stop job') || 
+            str_contains($messageLower, 'stop creating job') || 
+            str_contains($messageLower, 'cancel creating job') ||
+            $messageLower === 'cancel' ||
+            $messageLower === 'stop') {
+            Cache::forget($sessionKey);
+            $response = "Job creation cancelled. If you'd like to create a new job, just say 'create job' or 'post a job'.";
+            
+            ChatMessage::create([
+                'user_id' => $user->id,
+                'role' => 'bot',
+                'message' => $response,
+            ]);
+            
+            return response()->json(['response' => $response]);
+        }
+
         $currentStep = $jobDraft['step'];
         $data = $jobDraft['data'];
 

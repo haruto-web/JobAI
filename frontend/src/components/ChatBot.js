@@ -400,6 +400,7 @@ function ChatBot({ isOpen, onToggle }) {
             </p>
             <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
               “Once you’ve created a job, you can update details like the title, description, and salary anytime in your dashboard.”
+              “To cancel job creation, just say 'cancel job' or 'stop job'.”
             </p>
             {jobDraft && (
               <div className="job-draft">

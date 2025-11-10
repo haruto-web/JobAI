@@ -124,13 +124,13 @@ function Account({ isLoggedIn }) {
       const token = localStorage.getItem('token');
       const dataToSend = {};
       
-      if (profileData.bio) dataToSend.bio = profileData.bio;
+      if (profileData.bio && profileData.bio.trim()) dataToSend.bio = profileData.bio;
       if (profileData.skills && profileData.skills.length > 0) {
         dataToSend.skills = profileData.skills.filter(s => s.trim() !== '');
       }
-      if (profileData.experience_level) dataToSend.experience_level = profileData.experience_level;
-      if (profileData.years_of_experience) dataToSend.years_of_experience = parseInt(profileData.years_of_experience);
-      if (profileData.education_attainment) dataToSend.education_attainment = profileData.education_attainment;
+      if (profileData.experience_level && profileData.experience_level.trim()) dataToSend.experience_level = profileData.experience_level;
+      if (profileData.years_of_experience && profileData.years_of_experience !== '') dataToSend.years_of_experience = parseInt(profileData.years_of_experience);
+      if (profileData.education_attainment && profileData.education_attainment.trim()) dataToSend.education_attainment = profileData.education_attainment;
       
       await axios.put(`${API_URL}/user/profile`, dataToSend, {
         headers: { Authorization: `Bearer ${token}` }

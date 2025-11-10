@@ -210,9 +210,20 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
+            // Check if Cloudinary is configured
+            if (!env('CLOUDINARY_CLOUD_NAME') || !env('CLOUDINARY_KEY') || !env('CLOUDINARY_SECRET')) {
+                throw new \Exception('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_KEY, and CLOUDINARY_SECRET environment variables.');
+            }
+
             // Upload to Cloudinary
             $uploadedFile = $request->file('profile_image');
-            $result = cloudinary()->upload($uploadedFile->getRealPath(), [
+            $cloudinary = cloudinary();
+            
+            if (!$cloudinary) {
+                throw new \Exception('Cloudinary service is not available');
+            }
+            
+            $result = $cloudinary->upload($uploadedFile->getRealPath(), [
                 'folder' => 'job-ai/avatars',
                 'public_id' => 'user_' . $user->id . '_' . time(),
             ]);
@@ -225,7 +236,9 @@ class AuthController extends Controller
             Log::error('Cloudinary upload failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'cloud_name' => config('cloudinary.cloud_url'),
+                'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                'has_key' => !empty(env('CLOUDINARY_KEY')),
+                'has_secret' => !empty(env('CLOUDINARY_SECRET')),
             ]);
             return response()->json([
                 'message' => 'Failed to upload image',

@@ -9,16 +9,16 @@ Route::get('/ping', function () {
 });
 
 Route::get('/', function () {
-    try {
-        return view('welcome');
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'app_running' => true,
-            'laravel_version' => app()->version()
-        ], 500);
-    }
+    return response()->json([
+        'status' => 'success',
+        'message' => 'JobAI API is running',
+        'version' => app()->version(),
+        'endpoints' => [
+            'api' => url('/api'),
+            'health' => url('/ping'),
+            'debug' => url('/debug')
+        ]
+    ]);
 });
 
 Route::get('/debug', function () {

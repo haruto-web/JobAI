@@ -5,7 +5,16 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\GoogleController; // use the GoogleController for social login
 
 Route::get('/', function () {
-    return view('welcome');
+    return response()->json(['status' => 'ok', 'message' => 'Laravel API is running']);
+});
+
+Route::get('/debug', function () {
+    return response()->json([
+        'app_env' => env('APP_ENV'),
+        'app_debug' => env('APP_DEBUG'),
+        'db_connection' => env('DB_CONNECTION'),
+        'google_configured' => !empty(config('services.google.client_id'))
+    ]);
 });
 
 Route::get('/dashboard', function () {

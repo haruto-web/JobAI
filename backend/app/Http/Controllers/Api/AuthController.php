@@ -193,6 +193,10 @@ class AuthController extends Controller
                 'folder' => 'profile_images'
             ]);
 
+            if (!$result || !isset($result['secure_url'])) {
+                throw new \Exception('Cloudinary upload failed - no URL returned');
+            }
+
             $user->profile_image = $result['secure_url'];
             $user->save();
 

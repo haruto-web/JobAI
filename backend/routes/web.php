@@ -23,11 +23,17 @@ Route::get('/debug', function () {
             'app_debug' => env('APP_DEBUG'),
             'app_key_set' => !empty(env('APP_KEY')),
             'db_connection' => env('DB_CONNECTION'),
-            'google_configured' => !empty(config('services.google.client_id'))
+            'google_configured' => !empty(config('services.google.client_id')),
+            'cors_origins' => config('cors.allowed_origins'),
+            'cors_patterns' => config('cors.allowed_origins_patterns')
         ]);
     } catch (\Exception $e) {
         return response($e->getMessage(), 500);
     }
+});
+
+Route::get('/cors-test', function () {
+    return response()->json(['message' => 'CORS test successful', 'timestamp' => now()]);
 });
 
 Route::get('/dashboard', function () {

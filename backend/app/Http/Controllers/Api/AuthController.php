@@ -181,15 +181,12 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
-            // Upload to Cloudinary
+            // Upload to Cloudinary using Cloudinary facade
             $uploadedFile = $request->file('profile_image');
-            $result = cloudinary()->upload($uploadedFile->getRealPath(), [
+            $result = \Cloudinary\Cloudinary::uploadApi()->upload($uploadedFile->getRealPath(), [
                 'folder' => 'avatars',
                 'transformation' => [
-                    'width' => 400,
-                    'height' => 400,
-                    'crop' => 'fill',
-                    'gravity' => 'face'
+                    ['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']
                 ]
             ]);
 
@@ -197,17 +194,17 @@ class AuthController extends Controller
             if ($user->getAttribute('profile_image') && str_contains($user->getAttribute('profile_image'), 'cloudinary')) {
                 $publicId = $this->extractCloudinaryPublicId($user->getAttribute('profile_image'));
                 if ($publicId) {
-                    cloudinary()->destroy($publicId);
+                    \Cloudinary\Cloudinary::uploadApi()->destroy($publicId);
                 }
             }
 
-            $user->setAttribute('profile_image', $result->getSecurePath());
+            $user->setAttribute('profile_image', $result['secure_url']);
             $user->save();
 
             return response()->json($user);
         } catch (\Exception $e) {
             Log::error('Profile image upload failed', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'Failed to upload image'], 500);
+            return response()->json(['message' => 'Failed to upload image: ' . $e->getMessage()], 500);
         }
     }
 

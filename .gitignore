@@ -5,6 +5,7 @@ frontend/.env
 
 # Dependencies
 node_modules/
+vendor/
 backend/vendor/
 
 # Build outputs

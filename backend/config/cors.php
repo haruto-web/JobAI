@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'register', 'urgent-jobs', 'auth/*'],
 
     'allowed_methods' => ['*'],
 
@@ -28,9 +28,12 @@ return [
         'http://127.0.0.1:3001',
         'http://localhost:3003', // Current React dev server port
         'http://127.0.0.1:3003',
+        'https://job-ai-liart.vercel.app', // Production frontend
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '/^https:\/\/.*\.vercel\.app$/', // All Vercel preview deployments
+    ],
 
     'allowed_headers' => ['*'],
 

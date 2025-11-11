@@ -193,7 +193,10 @@ class AuthController extends Controller
                 'folder' => 'profile_images'
             ]);
 
+            Log::info('Cloudinary upload result', ['result' => $result]);
+
             if (!$result || !isset($result['secure_url'])) {
+                Log::error('Cloudinary result invalid', ['result' => $result]);
                 throw new \Exception('Cloudinary upload failed - no URL returned');
             }
 
@@ -202,7 +205,7 @@ class AuthController extends Controller
 
             return response()->json($user);
         } catch (\Exception $e) {
-            Log::error('Profile image upload failed', ['error' => $e->getMessage()]);
+            Log::error('Profile image upload failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['message' => 'Failed to upload image: ' . $e->getMessage()], 500);
         }
     }

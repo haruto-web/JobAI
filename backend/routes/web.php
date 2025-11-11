@@ -4,17 +4,30 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\GoogleController; // use the GoogleController for social login
 
+Route::get('/ping', function () {
+    return 'pong';
+});
+
 Route::get('/', function () {
-    return response()->json(['status' => 'ok', 'message' => 'Laravel API is running']);
+    try {
+        return response()->json(['status' => 'ok', 'message' => 'Laravel API is running']);
+    } catch (\Exception $e) {
+        return response($e->getMessage(), 500);
+    }
 });
 
 Route::get('/debug', function () {
-    return response()->json([
-        'app_env' => env('APP_ENV'),
-        'app_debug' => env('APP_DEBUG'),
-        'db_connection' => env('DB_CONNECTION'),
-        'google_configured' => !empty(config('services.google.client_id'))
-    ]);
+    try {
+        return response()->json([
+            'app_env' => env('APP_ENV'),
+            'app_debug' => env('APP_DEBUG'),
+            'app_key_set' => !empty(env('APP_KEY')),
+            'db_connection' => env('DB_CONNECTION'),
+            'google_configured' => !empty(config('services.google.client_id'))
+        ]);
+    } catch (\Exception $e) {
+        return response($e->getMessage(), 500);
+    }
 });
 
 Route::get('/dashboard', function () {

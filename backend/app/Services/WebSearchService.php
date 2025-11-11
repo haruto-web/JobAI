@@ -74,13 +74,27 @@ class WebSearchService
      */
     public function requiresWebSearch($query)
     {
-        $queryLower = strtolower($query);
+        $queryLower = strtolower(trim($query));
+
+        // Check if query ends with question mark
+        if (str_ends_with($query, '?')) {
+            return true;
+        }
+
+        // Check if query starts with question words
+        $questionStarters = ['what', 'who', 'where', 'when', 'why', 'how', 'which', 'whose', 'whom'];
+        $firstWord = strtok($queryLower, ' ');
+        if (in_array($firstWord, $questionStarters)) {
+            return true;
+        }
 
         // Keywords that indicate web search is needed
         $searchIndicators = [
             'what is',
             'who is',
             'how to',
+            'how many',
+            'how much',
             'latest',
             'current',
             'news about',
@@ -91,7 +105,7 @@ class WebSearchService
             'find',
             'look up',
             'research',
-            'what are the',
+            'what are',
             'where is',
             'when is',
             'why is',
@@ -105,8 +119,6 @@ class WebSearchService
             'data on',
             'trends in',
             'market for',
-            'industry',
-            'company',
             'technology',
             'science',
             'health',

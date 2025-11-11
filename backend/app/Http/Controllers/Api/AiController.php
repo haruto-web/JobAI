@@ -442,6 +442,20 @@ class AiController extends Controller
         $messageLower = strtolower($message);
         $isEmployer = $user->user_type === 'employer';
 
+        // Self-introduction request
+        if (str_contains($messageLower, 'self-introduction') || str_contains($messageLower, 'self introduction') ||
+            str_contains($messageLower, 'introduce myself') || str_contains($messageLower, 'introduce me') ||
+            str_contains($messageLower, 'create introduction') || str_contains($messageLower, 'write introduction') ||
+            str_contains($messageLower, 'make introduction')) {
+            return "I'd be happy to help you create a personalized self-introduction! However, I need some information about you first:\n\n" .
+                   "1. **Your name** (or how you'd like to be addressed)\n" .
+                   "2. **Your professional background** (current role, years of experience, or field of study if you're a student)\n" .
+                   "3. **Your key skills or expertise** (e.g., programming languages, tools, domains)\n" .
+                   "4. **What you're looking for** (e.g., job opportunities, career change, internships)\n" .
+                   "5. **Any specific achievements or highlights** you'd like to mention (optional)\n\n" .
+                   "Alternatively, if you've uploaded your resume to the system, I can analyze it and create a self-introduction based on that information. Just let me know!";
+        }
+
         // Job Search & Matching
         if (str_contains($messageLower, 'what jobs') || str_contains($messageLower, 'available for me') ||
             str_contains($messageLower, 'show me') && str_contains($messageLower, 'jobs') ||
@@ -611,41 +625,53 @@ class AiController extends Controller
                    "• freeCodeCamp - Free coding bootcamp\n\n" .
                    "Share your skills below for personalized job matches!";
         }
-        // General fallback
+        // General fallback - only show welcome for greetings
         else {
-            if ($isEmployer) {
-                return "👋 **Welcome, Employer!**\n\n" .
-                       "I'm your AI hiring assistant. I can help you with:\n\n" .
-                       "📝 **Job Posting**\n" .
-                       "• Create professional job listings\n" .
-                       "• Write compelling descriptions\n\n" .
-                       "👥 **Candidate Management**\n" .
-                       "• Review applications\n" .
-                       "• Screen candidates\n\n" .
-                       "🎯 **Hiring Strategy**\n" .
-                       "• Set competitive salaries\n" .
-                       "• Attract top talent\n\n" .
-                       "Try saying: 'Create a job' to get started!";
+            // Check if it's a greeting
+            if (preg_match('/^(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/i', $messageLower)) {
+                if ($isEmployer) {
+                    return "👋 **Welcome, Employer!**\n\n" .
+                           "I'm your AI hiring assistant. I can help you with:\n\n" .
+                           "📝 **Job Posting**\n" .
+                           "• Create professional job listings\n" .
+                           "• Write compelling descriptions\n\n" .
+                           "👥 **Candidate Management**\n" .
+                           "• Review applications\n" .
+                           "• Screen candidates\n\n" .
+                           "🎯 **Hiring Strategy**\n" .
+                           "• Set competitive salaries\n" .
+                           "• Attract top talent\n\n" .
+                           "Try saying: 'Create a job' to get started!";
+                }
+                return "👋 **Hi! I'm Your AI Career Advisor**\n\n" .
+                       "I'm here to help you land your dream job! Here's what I can do:\n\n" .
+                       "🔍 **Job Search**\n" .
+                       "• Find jobs matching your skills\n" .
+                       "• Get personalized recommendations\n\n" .
+                       "💼 **Application Help**\n" .
+                       "• Resume tips and optimization\n" .
+                       "• Cover letter guidance\n\n" .
+                       "🎯 **Interview Prep**\n" .
+                       "• Common questions practice\n" .
+                       "• Interview strategies\n\n" .
+                       "🚀 **Career Advice**\n" .
+                       "• Skill development tips\n" .
+                       "• Career growth strategies\n\n" .
+                       "**Quick Start:**\n" .
+                       "1. Type your skills for job matches\n" .
+                       "2. Upload your resume for analysis\n" .
+                       "3. Ask me anything about your job search!\n\n" .
+                       "What would you like help with today?";
             }
-            return "👋 **Hi! I'm Your AI Career Advisor**\n\n" .
-                   "I'm here to help you land your dream job! Here's what I can do:\n\n" .
-                   "🔍 **Job Search**\n" .
-                   "• Find jobs matching your skills\n" .
-                   "• Get personalized recommendations\n\n" .
-                   "💼 **Application Help**\n" .
-                   "• Resume tips and optimization\n" .
-                   "• Cover letter guidance\n\n" .
-                   "🎯 **Interview Prep**\n" .
-                   "• Common questions practice\n" .
-                   "• Interview strategies\n\n" .
-                   "🚀 **Career Advice**\n" .
-                   "• Skill development tips\n" .
-                   "• Career growth strategies\n\n" .
-                   "**Quick Start:**\n" .
-                   "1. Type your skills for job matches\n" .
-                   "2. Upload your resume for analysis\n" .
-                   "3. Ask me anything about your job search!\n\n" .
-                   "What would you like help with today?";
+            
+            // For other queries, provide a helpful response
+            return "I'm here to help with your career and job search! You can ask me about:\n\n" .
+                   "• Job opportunities and recommendations\n" .
+                   "• Resume and cover letter tips\n" .
+                   "• Interview preparation\n" .
+                   "• Career advice and skill development\n" .
+                   "• Company information and salary data\n\n" .
+                   "What specific question can I help you with?";
         }
     }
 

@@ -182,30 +182,17 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
-            if ($user->profile_image && str_contains($user->profile_image, 'cloudinary')) {
-                $publicId = $this->extractCloudinaryPublicId($user->profile_image);
-                if ($publicId) {
-                    cloudinary()->uploadApi()->destroy($publicId);
-                }
+            if ($user->profile_image && !str_contains($user->profile_image, 'http')) {
+                Storage::disk('public')->delete($user->profile_image);
             }
 
-            $result = cloudinary()->uploadApi()->upload($request->file('profile_image')->getRealPath(), [
-                'folder' => 'profile_images'
-            ]);
-
-            Log::info('Cloudinary upload result', ['result' => $result]);
-
-            if (!$result || !isset($result['secure_url'])) {
-                Log::error('Cloudinary result invalid', ['result' => $result]);
-                throw new \Exception('Cloudinary upload failed - no URL returned');
-            }
-
-            $user->profile_image = $result['secure_url'];
+            $path = $request->file('profile_image')->store('profile_images', 'public');
+            $user->profile_image = $path;
             $user->save();
 
             return response()->json($user);
         } catch (\Exception $e) {
-            Log::error('Profile image upload failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Profile image upload failed', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to upload image: ' . $e->getMessage()], 500);
         }
     }

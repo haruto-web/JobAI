@@ -328,15 +328,16 @@ class AiController extends Controller
 
             // Different system prompt based on user type
             if ($user->user_type === 'employer') {
-                $systemPrompt = "You are an AI assistant for employers on a job recommendation website. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Common topics include: creating effective job descriptions, reviewing applications, interview scheduling, hiring best practices, and managing job listings. Be professional, helpful, and focused on employer needs. Provide actionable advice for successful hiring.";
+                $systemPrompt = "You are an AI assistant for employers on a job recommendation website. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Maintain conversation context and provide follow-up responses. Be professional, helpful, and focused on employer needs. Provide actionable advice for successful hiring.";
             } else {
-                $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Common topics include: finding jobs by location/skill/type, applying for jobs, uploading resumes, cover letter tips, company details, interview preparation, application status, and career improvement. Be friendly, helpful, and professional. Use the provided context about the user when relevant. If asked about specific jobs, reference available job listings. Provide actionable advice and keep responses concise but informative. Always encourage next steps and offer to help further.";
+                $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search, applications, interviews, and career advice. IMPORTANT: Maintain conversation context - if the user says 'yes' or asks follow-up questions, refer to the previous conversation. Be friendly, helpful, and professional. Keep responses concise but informative. Always encourage next steps and offer to help further.";
             }
 
-            // Fetch recent chat history
+            // Fetch recent chat history (excluding current message)
             $chatHistory = ChatMessage::where('user_id', $user->id)
+                ->where('created_at', '<', now())
                 ->orderBy('created_at', 'desc')
-                ->limit(5) // Get last 5 messages for context
+                ->limit(10) // Get last 10 messages for better context
                 ->get()
                 ->reverse(); // Reverse to get chronological order
 
@@ -351,9 +352,26 @@ class AiController extends Controller
 
             // Add the current user message
             $messagesForOpenAI[] = ['role' => 'user', 'content' => $message];
+            
+            Log::info('Chat context', ['messages_count' => count($messagesForOpenAI), 'requires_search' => $requiresSearch, 'search_results_count' => count($searchResults)]);
 
             if ($requiresSearch && !empty($searchResults)) {
-                $aiResponse = $openai->generateSearchEnhancedResponse($message, $searchResults, $user->user_type);
+                Log::info('Using search-enhanced response');
+                // Add search context to messages
+                $searchContext = "Web search results:\n";
+                foreach ($searchResults as $i => $result) {
+                    $searchContext .= ($i + 1) . ". " . $result['title'] . "\n";
+                    $searchContext .= "   " . $result['snippet'] . "\n";
+                    $searchContext .= "   Source: " . $result['link'] . "\n\n";
+                }
+                $messagesForOpenAI[] = ['role' => 'system', 'content' => $searchContext];
+                
+                $response = $openai->getClient()->chat()->create([
+                    'model' => 'gpt-3.5-turbo',
+                    'messages' => $messagesForOpenAI,
+                    'max_tokens' => 600,
+                ]);
+                $aiResponse = $response->choices[0]->message->content;
             } else {
                 $response = $openai->getClient()->chat()->create([
                     'model' => 'gpt-3.5-turbo',

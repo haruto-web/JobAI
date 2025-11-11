@@ -30,7 +30,11 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
+# Copy and set startup script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 # Expose port
 EXPOSE 8000
 
-CMD php artisan config:clear && php artisan cache:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-8000} 2>&1 || (echo "Server failed to start" && tail -100 storage/logs/laravel.log && exit 1)
+CMD ["/start.sh"]

@@ -9,11 +9,7 @@ Route::get('/ping', function () {
 });
 
 Route::get('/', function () {
-    try {
-        return response()->json(['status' => 'ok', 'message' => 'Laravel API is running']);
-    } catch (\Exception $e) {
-        return response($e->getMessage(), 500);
-    }
+    return view('welcome');
 });
 
 Route::get('/debug', function () {

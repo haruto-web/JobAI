@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('ai/chat', [AiController::class, 'chat']);
     Route::post('ai/resume-chat', [AiController::class, 'resumeChat']);
     Route::get('ai/chat-history', [AiController::class, 'getChatHistory']);
+    Route::delete('ai/chat-history', [AiController::class, 'deleteChatHistory']);
     Route::post('ai/job-action', [AiController::class, 'jobAction']);
 
     // Payments

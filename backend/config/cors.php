@@ -15,27 +15,22 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'register', 'login', 'logout', 'auth/*'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_filter([
-        'http://localhost:5173',
+    'allowed_origins' => [
+        'http://localhost:5173', // React dev server
         'http://127.0.0.1:5173',
-        'http://localhost:3000',
+        'http://localhost:3000', // Create React App dev server
         'http://127.0.0.1:3000',
-        'http://localhost:3001',
+        'http://localhost:3001', // Additional port for Create React App
         'http://127.0.0.1:3001',
-        'http://localhost:3003',
+        'http://localhost:3003', // Current React dev server port
         'http://127.0.0.1:3003',
-        env('FRONTEND_URL'),
-        env('CORS_ALLOWED_ORIGINS'),
-    ]),
-
-    'allowed_origins_patterns' => [
-        '/^https:\/\/.*\.netlify\.app$/',
-        '/^https:\/\/.*\.vercel\.app$/',
     ],
+
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 

@@ -12,7 +12,6 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
-use Cloudinary\Cloudinary;
 use App\Services\OpenAIService;
 use App\Services\ResumeParserService;
 
@@ -41,18 +40,15 @@ class AuthController extends Controller
                 ]
             );
 
-            $resetUrl = (config('app.frontend_url') ?: env('FRONTEND_URL', 'http://localhost:3000')) . '/reset-password?token=' . $token . '&email=' . urlencode($validated['email']);
-
-            // Send email
-            $user = User::where('email', $validated['email'])->first();
-            \Mail::to($user->email)->send(new \App\Mail\PasswordReset($user, $token, $resetUrl));
-
             return response()->json([
-                'message' => 'Password reset link has been sent to your email.',
+                'message' => 'Password reset token generated.',
+                'email' => $validated['email'],
+                'token' => $token,
+                'reset_url' => config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($validated['email'])
             ]);
         } catch (\Exception $e) {
             Log::error('Password reset failed: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to send reset email.'], 500);
+            return response()->json(['message' => 'Failed to generate reset token.'], 500);
         }
     }
 
@@ -163,43 +159,9 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $user = $request->user();
-        
-        // Schedule chat messages deletion after 2 minutes
-        \Illuminate\Support\Facades\Cache::put(
-            'delete_chat_messages_' . $user->id,
-            true,
-            now()->addMinutes(2)
-        );
-        
-        // Delete chat messages after 2 minutes using a job
-        \App\Jobs\DeleteChatMessages::dispatch($user->id)->delay(now()->addMinutes(2));
-        
-        $user->currentAccessToken()->delete();
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out']);
-    }
-
-    /**
-     * Change user password
-     */
-    public function changePassword(Request $request)
-    {
-        $request->validate([
-            'current_password' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $user = $request->user();
-
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json(['message' => 'Current password is incorrect'], 400);
-        }
-
-        $user->password = Hash::make($request->new_password);
-        $user->save();
-
-        return response()->json(['message' => 'Password changed successfully']);
     }
 
     public function updateUser(Request $request)
@@ -222,46 +184,17 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        try {
-            // Check if Cloudinary is configured
-            if (!env('CLOUDINARY_CLOUD_NAME') || !env('CLOUDINARY_KEY') || !env('CLOUDINARY_SECRET')) {
-                throw new \Exception('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_KEY, and CLOUDINARY_SECRET environment variables.');
-            }
-
-            // Upload to Cloudinary using SDK directly
-            $uploadedFile = $request->file('profile_image');
-            
-            $cloudinary = new Cloudinary([
-                'cloud' => [
-                    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-                    'api_key' => env('CLOUDINARY_KEY'),
-                    'api_secret' => env('CLOUDINARY_SECRET'),
-                ],
-            ]);
-            
-            $result = $cloudinary->uploadApi()->upload($uploadedFile->getRealPath(), [
-                'folder' => 'job-ai/avatars',
-                'public_id' => 'user_' . $user->id . '_' . time(),
-            ]);
-
-            $user->setAttribute('profile_image', $result['secure_url']);
-            $user->save();
-
-            return response()->json($user);
-        } catch (\Exception $e) {
-            Log::error('Cloudinary upload failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-                'has_key' => !empty(env('CLOUDINARY_KEY')),
-                'has_secret' => !empty(env('CLOUDINARY_SECRET')),
-            ]);
-            return response()->json([
-                'message' => 'Failed to upload image',
-                'error' => $e->getMessage(),
-                'debug' => config('app.debug') ? $e->getTraceAsString() : null
-            ], 500);
+        // Delete old image if exists
+        if ($user->getAttribute('profile_image')) {
+            Storage::disk('public')->delete($user->getAttribute('profile_image'));
         }
+
+        $path = $request->file('profile_image')->store('avatars', 'public');
+
+        $user->setAttribute('profile_image', $path);
+        $user->save();
+
+        return response()->json($user);
     }
 
     public function user(Request $request)

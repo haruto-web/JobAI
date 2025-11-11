@@ -14,16 +14,14 @@ class PasswordReset extends Mailable
     use Queueable, SerializesModels;
 
     public $user;
-    public $token;
     public $resetUrl;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($user, $token, $resetUrl)
+    public function __construct($user, $resetUrl)
     {
         $this->user = $user;
-        $this->token = $token;
         $this->resetUrl = $resetUrl;
     }
 
@@ -46,7 +44,6 @@ class PasswordReset extends Mailable
             markdown: 'emails.password-reset',
             with: [
                 'user' => $this->user,
-                'token' => $this->token,
                 'resetUrl' => $this->resetUrl,
             ],
         );

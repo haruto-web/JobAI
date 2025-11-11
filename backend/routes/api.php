@@ -6,13 +6,7 @@ use App\Http\Controllers\Api\{
 };
 use Illuminate\Support\Facades\Route;
 
-// ---------------- Health Check ----------------
-Route::get('/health', function () {
-    return response()->json(['status' => 'ok']);
-});
-
 // ---------------- Public Routes ----------------
-Route::get('test-openai', [AiController::class, 'testOpenAI']);
 Route::post('login', [AuthController::class, 'login']);
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verify-email', [AuthController::class, 'verifyEmail']);
@@ -46,7 +40,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('user/notifications', [AuthController::class, 'getNotifications']);
     Route::put('user/notifications/{id}/read', [AuthController::class, 'markNotificationAsRead']);
     Route::put('user/notifications/read-all', [AuthController::class, 'markAllNotificationsAsRead']);
-    Route::post('user/change-password', [AuthController::class, 'changePassword']);
     Route::post('logout', [AuthController::class, 'logout']);
 
     // Jobs
@@ -70,9 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('ai/chat', [AiController::class, 'chat']);
     Route::post('ai/resume-chat', [AiController::class, 'resumeChat']);
     Route::get('ai/chat-history', [AiController::class, 'getChatHistory']);
-    Route::delete('ai/chat-history', [AiController::class, 'deleteChatHistory']);
     Route::post('ai/job-action', [AiController::class, 'jobAction']);
-    Route::get('ai/test-openai', [AiController::class, 'testOpenAI']);
 
     // Payments
     Route::get('payments', [PaymentController::class, 'index']);

@@ -14,41 +14,49 @@ class GoogleController extends Controller
     // Redirect to Google
     public function redirectToGoogle()
     {
-        try {
-            return Socialite::driver('google')->stateless()->redirect();
-        } catch (\Exception $e) {
-            \Log::error('Google OAuth redirect failed', ['error' => $e->getMessage()]);
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-            return redirect("{$frontendUrl}/login?error=oauth_error");
-        }
+        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+        $driver = Socialite::driver('google');
+
+        // Force the redirect URL to the backend callback route so Google returns
+        // to the server (not the frontend) regardless of environment config.
+        // Use Laravel's url() helper which respects APP_URL.
+        $callbackUrl = url('/auth/google/callback');
+
+        // stateless() is available on the two-provider implementation. Annotating the
+        // $driver variable above helps static analyzers (intelephense) understand
+        // the available methods and prevents false-positive "undefined method" warnings.
+        return $driver->stateless()->redirectUrl($callbackUrl)->redirect();
     }
 
     // Handle callback
     public function handleGoogleCallback()
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-        
         try {
-            if (!config('services.google.client_id') || !config('services.google.client_secret')) {
-                return redirect("{$frontendUrl}/login?error=oauth_not_configured");
-            }
-            
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            $driver = Socialite::driver('google');
+
+            // Ensure the provider uses the backend callback URL when retrieving
+            // the user information (this prevents mismatched redirect URIs).
+            $callbackUrl = url('/auth/google/callback');
+            $googleUser = $driver->stateless()->redirectUrl($callbackUrl)->user();
+
             $user = User::where('email', $googleUser->getEmail())->first();
-            
+
             if ($user) {
+                // User exists, log in
                 $token = $user->createToken('google-login')->plainTextToken;
-                return redirect("{$frontendUrl}/oauth/complete?token={$token}");
+                // Redirect to frontend oauth completion page which will postMessage back to opener or handle direct redirect
+                return redirect("http://localhost:3000/oauth/complete?token=$token");
+            } else {
+                // User does not exist, redirect to frontend oauth completion page with profile details
+                $email = urlencode($googleUser->getEmail());
+                $name = urlencode($googleUser->getName());
+                $avatar = urlencode($googleUser->getAvatar());
+                return redirect("http://localhost:3000/oauth/complete?email={$email}&name={$name}&avatar={$avatar}&provider=google");
             }
-            
-            return redirect("{$frontendUrl}/oauth/complete?email=" . urlencode($googleUser->getEmail()) . 
-                "&name=" . urlencode($googleUser->getName()) . 
-                "&avatar=" . urlencode($googleUser->getAvatar() ?? '') . 
-                "&provider=google");
-                
+
         } catch (\Exception $e) {
-            \Log::error('OAuth error: ' . $e->getMessage());
-            return redirect("{$frontendUrl}/login?error=oauth_failed");
+            return redirect("http://localhost:3000/login?error=google_auth_failed");
         }
     }
 }

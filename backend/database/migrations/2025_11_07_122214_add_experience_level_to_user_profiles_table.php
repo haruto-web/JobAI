@@ -12,9 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('user_profiles', function (Blueprint $table) {
-            if (!Schema::hasColumn('user_profiles', 'experience_level')) {
-                $table->string('experience_level')->nullable();
-            }
+            $table->string('experience_level')->nullable();
         });
     }
 

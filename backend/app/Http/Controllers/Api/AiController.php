@@ -41,21 +41,30 @@ class AiController extends Controller
                 return response()->json(['message' => 'Unsupported file type or could not parse resume. Please upload a PDF or Word document.'], 400);
             }
 
-            // Analyze resume with OpenAI if available; on failure, fall back to basic text analysis
+            // Analyze resume with OpenAI if available; on failure, fall back to a safe default analysis
             $analysis = null;
             $openai = null;
             try {
                 if (is_string(config('services.openai.api_key')) && trim(config('services.openai.api_key')) !== '') {
                     $openai = new OpenAIService();
                     $analysis = $openai->analyzeResumeComprehensively($resumeText);
-                    Log::info('OpenAI analysis successful', ['user_id' => $user->id]);
                 } else {
-                    Log::info('OpenAI API key not configured; using basic analysis', ['user_id' => $user->id]);
-                    $analysis = $this->basicResumeAnalysis($resumeText);
+                    Log::info('OpenAI API key not configured; skipping AI analysis', ['user_id' => $user->id]);
                 }
             } catch (\Throwable $e) {
-                Log::error('OpenAI analysis failed, using basic analysis', ['error' => $e->getMessage(), 'user_id' => $user->id]);
-                $analysis = $this->basicResumeAnalysis($resumeText);
+                // Log the error but continue with a sensible fallback so the endpoint doesn't return 500
+                Log::error('Resume analysis failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+                $analysis = [
+                    'skills' => [],
+                    'experience_years' => 'Unknown',
+                    'education' => [],
+                    'certifications' => [],
+                    'languages' => [],
+                    'summary' => 'AI analysis unavailable at the moment',
+                    'strengths' => [],
+                    'experience_level' => 'entry',
+                    'key_achievements' => []
+                ];
             }
 
             // Update user profile with analysis
@@ -328,16 +337,15 @@ class AiController extends Controller
 
             // Different system prompt based on user type
             if ($user->user_type === 'employer') {
-                $systemPrompt = "You are an AI assistant for employers on a job recommendation website. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Maintain conversation context and provide follow-up responses. Be professional, helpful, and focused on employer needs. Provide actionable advice for successful hiring.";
+                $systemPrompt = "You are an AI assistant for employers on a job recommendation website. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Common topics include: creating effective job descriptions, reviewing applications, interview scheduling, hiring best practices, and managing job listings. Be professional, helpful, and focused on employer needs. Provide actionable advice for successful hiring.";
             } else {
-                $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search, applications, interviews, and career advice. IMPORTANT: Maintain conversation context - if the user says 'yes' or asks follow-up questions, refer to the previous conversation. Be friendly, helpful, and professional. Keep responses concise but informative. Always encourage next steps and offer to help further.";
+                $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Common topics include: finding jobs by location/skill/type, applying for jobs, uploading resumes, cover letter tips, company details, interview preparation, application status, and career improvement. Be friendly, helpful, and professional. Use the provided context about the user when relevant. If asked about specific jobs, reference available job listings. Provide actionable advice and keep responses concise but informative. Always encourage next steps and offer to help further.";
             }
 
-            // Fetch recent chat history (excluding current message)
+            // Fetch recent chat history
             $chatHistory = ChatMessage::where('user_id', $user->id)
-                ->where('created_at', '<', now())
                 ->orderBy('created_at', 'desc')
-                ->limit(10) // Get last 10 messages for better context
+                ->limit(5) // Get last 5 messages for context
                 ->get()
                 ->reverse(); // Reverse to get chronological order
 
@@ -352,26 +360,9 @@ class AiController extends Controller
 
             // Add the current user message
             $messagesForOpenAI[] = ['role' => 'user', 'content' => $message];
-            
-            Log::info('Chat context', ['messages_count' => count($messagesForOpenAI), 'requires_search' => $requiresSearch, 'search_results_count' => count($searchResults)]);
 
             if ($requiresSearch && !empty($searchResults)) {
-                Log::info('Using search-enhanced response');
-                // Add search context to messages
-                $searchContext = "Web search results:\n";
-                foreach ($searchResults as $i => $result) {
-                    $searchContext .= ($i + 1) . ". " . $result['title'] . "\n";
-                    $searchContext .= "   " . $result['snippet'] . "\n";
-                    $searchContext .= "   Source: " . $result['link'] . "\n\n";
-                }
-                $messagesForOpenAI[] = ['role' => 'system', 'content' => $searchContext];
-                
-                $response = $openai->getClient()->chat()->create([
-                    'model' => 'gpt-3.5-turbo',
-                    'messages' => $messagesForOpenAI,
-                    'max_tokens' => 600,
-                ]);
-                $aiResponse = $response->choices[0]->message->content;
+                $aiResponse = $openai->generateSearchEnhancedResponse($message, $searchResults, $user->user_type);
             } else {
                 $response = $openai->getClient()->chat()->create([
                     'model' => 'gpt-3.5-turbo',
@@ -421,65 +412,12 @@ class AiController extends Controller
         return response()->json(['messages' => $messages]);
     }
 
-    public function testOpenAI(Request $request)
-    {
-        try {
-            $openai = new OpenAIService();
-            $response = $openai->getClient()->chat()->create([
-                'model' => 'gpt-3.5-turbo',
-                'messages' => [['role' => 'user', 'content' => 'Say "OpenAI is working!"']],
-                'max_tokens' => 20,
-            ]);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'OpenAI is working correctly!',
-                'response' => $response->choices[0]->message->content
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'OpenAI is not working',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function deleteChatHistory(Request $request)
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        ChatMessage::where('user_id', $user->id)->delete();
-        
-        // Also clear any job creation session
-        $sessionKey = "job_creation_{$user->id}";
-        Cache::forget($sessionKey);
-
-        return response()->json(['message' => 'Chat history deleted successfully']);
-    }
-
     private function generateFallbackResponse($message, $user)
     {
         $messageLower = strtolower($message);
         $isEmployer = $user->user_type === 'employer';
 
-        // Self-introduction request
-        if (str_contains($messageLower, 'self-introduction') || str_contains($messageLower, 'self introduction') ||
-            str_contains($messageLower, 'introduce myself') || str_contains($messageLower, 'introduce me') ||
-            str_contains($messageLower, 'create introduction') || str_contains($messageLower, 'write introduction') ||
-            str_contains($messageLower, 'make introduction')) {
-            return "I'd be happy to help you create a personalized self-introduction! However, I need some information about you first:\n\n" .
-                   "1. **Your name** (or how you'd like to be addressed)\n" .
-                   "2. **Your professional background** (current role, years of experience, or field of study if you're a student)\n" .
-                   "3. **Your key skills or expertise** (e.g., programming languages, tools, domains)\n" .
-                   "4. **What you're looking for** (e.g., job opportunities, career change, internships)\n" .
-                   "5. **Any specific achievements or highlights** you'd like to mention (optional)\n\n" .
-                   "Alternatively, if you've uploaded your resume to the system, I can analyze it and create a self-introduction based on that information. Just let me know!";
-        }
-
-        // Job Search & Matching
+        // Job Search & Matching - Different for employers vs job seekers
         if (str_contains($messageLower, 'what jobs') || str_contains($messageLower, 'available for me') ||
             str_contains($messageLower, 'show me') && str_contains($messageLower, 'jobs') ||
             str_contains($messageLower, 'part-time') || str_contains($messageLower, 'remote') ||
@@ -487,11 +425,7 @@ class AiController extends Controller
             str_contains($messageLower, 'jobs')) {
 
             if ($isEmployer) {
-                return "🏢 **For Employers:**\n\nYou can create job postings to attract top talent! I can help you:\n" .
-                       "• Create a professional job posting\n" .
-                       "• Write compelling job descriptions\n" .
-                       "• Set competitive salary ranges\n\n" .
-                       "Just say 'create a job' and I'll guide you through the process!";
+                return "As an employer, you can create job postings to attract candidates. Would you like me to help you create a job posting? Just tell me details like the position, requirements, and salary range.";
             }
 
             // Job seeker logic
@@ -499,6 +433,7 @@ class AiController extends Controller
             $hasSkills = $profile && is_array($profile->skills) && count($profile->skills) > 0;
             if ($hasSkills) {
                 $skills = $profile->skills;
+                // Use local job matching to suggest jobs
                 $jobs = Job::where('status', 'approved')->get();
                 $skillsLower = array_map(fn($s) => strtolower($s), $skills);
                 $scored = [];
@@ -522,44 +457,23 @@ class AiController extends Controller
                 usort($scored, fn($a, $b) => $b['confidence'] <=> $a['confidence']);
                 $suggestions = array_slice($scored, 0, 3);
                 if (!empty($suggestions)) {
-                    $response = "🎯 **Perfect Matches for You!**\n\nBased on your skills (" . implode(', ', array_slice($skills, 0, 5)) . (count($skills) > 5 ? '...' : '') . "), here are top opportunities:\n\n";
-                    foreach ($suggestions as $idx => $job) {
-                        $response .= ($idx + 1) . ". <a href=\"/job/" . $job['job_id'] . "\">" . $job['title'] . "</a> - " . $job['confidence'] . "% match\n   " . $job['description'] . "\n\n";
+                    $response = "Based on your skills (" . implode(', ', $skills) . "), here are some job suggestions:\n\n";
+                    foreach ($suggestions as $job) {
+                        $response .= "• <a href=\"/job/" . $job['job_id'] . "\">" . $job['title'] . "</a> (Match: " . $job['confidence'] . "%)\n  " . $job['description'] . "\n\n";
                     }
-                    $response .= "💡 **Next Steps:**\n• Click any job to view full details\n• Upload your resume for even better matches\n• Visit the Jobs page to see all openings";
+                    $response .= "Would you like me to help you apply to any of these jobs or provide more details?";
                     return $response;
                 } else {
-                    return "🔍 **No Perfect Matches Yet**\n\nI couldn't find jobs matching your current skills, but don't worry!\n\n" .
-                           "**Here's what you can do:**\n" .
-                           "1. 📝 Update your profile with more specific skills\n" .
-                           "2. 📄 Upload your resume for AI-powered matching\n" .
-                           "3. 🌐 Browse all jobs on our <a href=\"/jobs\">Jobs page</a>\n\n" .
-                           "Would you like help improving your profile?";
+                    return "I couldn't find any strong matches for your current skills. Try updating your profile with more specific skills or upload your resume for better suggestions!";
                 }
             } else {
-                return "👋 **Let's Get You Started!**\n\nTo find your perfect job match, I need to know your skills.\n\n" .
-                       "**Quick Options:**\n" .
-                       "1. 📝 Type your skills below (e.g., 'JavaScript, React, Node.js')\n" .
-                       "2. 📄 Upload your resume for instant analysis\n" .
-                       "3. ✏️ Update your profile in the Account page\n\n" .
-                       "What works best for you?";
+                return "To get personalized job suggestions, please update your profile with your skills or upload your resume. You can do this in your profile section!";
             }
         }
         // Application Help
         elseif (str_contains($messageLower, 'how do i apply') || str_contains($messageLower, 'upload') && str_contains($messageLower, 'résumé') ||
                 str_contains($messageLower, 'cover letter') || str_contains($messageLower, 'application')) {
-            return "💼 **How to Apply for Jobs**\n\n" .
-                   "**Step-by-Step:**\n" .
-                   "1. 🔍 Browse jobs on our <a href=\"/jobs\">Jobs page</a>\n" .
-                   "2. 👁️ Click any job to view full details\n" .
-                   "3. 📄 Upload your resume when applying\n" .
-                   "4. ✅ Submit your application\n\n" .
-                   "**Cover Letter Tips:**\n" .
-                   "• Address the hiring manager by name if possible\n" .
-                   "• Explain why you're excited about this specific role\n" .
-                   "• Highlight 2-3 relevant achievements\n" .
-                   "• Keep it concise (3-4 paragraphs max)\n\n" .
-                   "Need help with your resume? Just ask!";
+            return "To apply for jobs, visit our job listings page and click 'Apply' on any position that interests you. You can upload your resume and fill out the application form. For cover letters, highlight why you're a great fit for the role!";
         }
         // Company Information
         elseif (str_contains($messageLower, 'work at') || str_contains($messageLower, 'company') ||
@@ -570,131 +484,28 @@ class AiController extends Controller
         // Interview Assistance
         elseif (str_contains($messageLower, 'interview') || str_contains($messageLower, 'prepare for') ||
                 str_contains($messageLower, 'questions might') || str_contains($messageLower, 'they ask')) {
-            return "🎯 **Interview Preparation Guide**\n\n" .
-                   "**Common Questions to Practice:**\n" .
-                   "1. Tell me about yourself\n" .
-                   "2. Why do you want this job?\n" .
-                   "3. What are your strengths/weaknesses?\n" .
-                   "4. Where do you see yourself in 5 years?\n" .
-                   "5. Why should we hire you?\n\n" .
-                   "**Before the Interview:**\n" .
-                   "• 🔍 Research the company thoroughly\n" .
-                   "• 📝 Prepare 3-5 questions to ask them\n" .
-                   "• 👔 Choose professional attire\n" .
-                   "• 📍 Know the location/login details\n\n" .
-                   "**During the Interview:**\n" .
-                   "• Arrive 10-15 minutes early\n" .
-                   "• Make eye contact and smile\n" .
-                   "• Use the STAR method (Situation, Task, Action, Result)\n" .
-                   "• Ask thoughtful questions\n\n" .
-                   "Want to practice specific scenarios? Let me know!";
+            return "Interview prep is key! Practice common questions like 'Tell me about yourself' and 'Why do you want this job.' Research the company and prepare questions for them. I can help you practice specific scenarios!";
         }
         // Status Updates
         elseif (str_contains($messageLower, 'application been received') || str_contains($messageLower, 'next step') ||
                 str_contains($messageLower, 'status') || str_contains($messageLower, 'update')) {
-            return "📊 **Track Your Applications**\n\n" .
-                   "You can monitor all your applications in real-time!\n\n" .
-                   "**Where to Check:**\n" .
-                   "• 🏠 Visit your <a href=\"/dashboard\">Dashboard</a>\n" .
-                   "• 📧 Check your email for updates\n" .
-                   "• 🔔 View notifications in the top menu\n\n" .
-                   "**Application Stages:**\n" .
-                   "1. Submitted - Your application is received\n" .
-                   "2. Under Review - Employer is reviewing\n" .
-                   "3. Interview - You've been shortlisted!\n" .
-                   "4. Offer/Rejected - Final decision\n\n" .
-                   "We'll notify you at each stage. Good luck! 🎉";
-        }
-        // Resume Tips
-        elseif (str_contains($messageLower, 'resume tip') || str_contains($messageLower, 'improve my resume') ||
-                str_contains($messageLower, 'improve my résumé') || str_contains($messageLower, 'resume advice') ||
-                str_contains($messageLower, 'cv tip') || str_contains($messageLower, 'improve my cv')) {
-            return "Here are some key resume tips:\n\n" .
-                   "1. **Keep it concise**: Aim for 1-2 pages maximum\n" .
-                   "2. **Use action verbs**: Start bullet points with words like 'Developed', 'Managed', 'Led'\n" .
-                   "3. **Quantify achievements**: Include numbers and metrics (e.g., 'Increased sales by 30%')\n" .
-                   "4. **Tailor to each job**: Customize your resume for each position\n" .
-                   "5. **Include keywords**: Use terms from the job description\n" .
-                   "6. **Proofread carefully**: No typos or grammatical errors\n" .
-                   "7. **Use a clean format**: Easy to read with clear sections\n" .
-                   "8. **Add relevant skills**: Include both technical and soft skills\n\n" .
-                   "Would you like help with any specific section of your resume?";
+            return "You can check your application status in your dashboard under 'My Applications'. We'll notify you of any updates via email or your notifications panel.";
         }
         // Career Advice
-        elseif (str_contains($messageLower, 'which jobs fit') || str_contains($messageLower, 'courses') ||
-                str_contains($messageLower, 'get hired faster') || str_contains($messageLower, 'career') ||
-                str_contains($messageLower, 'advice')) {
+        elseif (str_contains($messageLower, 'which jobs fit') || str_contains($messageLower, 'improve my résumé') ||
+                str_contains($messageLower, 'courses') || str_contains($messageLower, 'get hired faster') ||
+                str_contains($messageLower, 'career') || str_contains($messageLower, 'advice')) {
             if ($isEmployer) {
-                return "💼 **Employer Resources**\n\n" .
-                       "I can help you with:\n" .
-                       "• 📝 Creating effective job descriptions\n" .
-                       "• 👥 Attracting top talent\n" .
-                       "• 📊 Setting competitive salaries\n" .
-                       "• ✅ Screening candidates efficiently\n" .
-                       "• 🎯 Building your employer brand\n\n" .
-                       "What specific aspect of hiring would you like help with?";
+                return "As an employer, I can help you with hiring strategies, creating effective job descriptions, and managing your recruitment process. What specific aspect of hiring would you like assistance with?";
             }
-            return "🚀 **Career Growth Tips**\n\n" .
-                   "**Get Hired Faster:**\n" .
-                   "1. 📝 Optimize your resume with keywords\n" .
-                   "2. 🔗 Build a strong LinkedIn profile\n" .
-                   "3. 🎯 Apply to 5-10 jobs daily\n" .
-                   "4. 💬 Network with industry professionals\n" .
-                   "5. 📚 Keep learning new skills\n\n" .
-                   "**Skill Development:**\n" .
-                   "• Coursera - Professional certificates\n" .
-                   "• Udemy - Affordable skill courses\n" .
-                   "• LinkedIn Learning - Business skills\n" .
-                   "• freeCodeCamp - Free coding bootcamp\n\n" .
-                   "Share your skills below for personalized job matches!";
+            return "For career advice, share your skills below to get job suggestions! To improve your resume, focus on quantifiable achievements and relevant skills. Consider online courses on platforms like Coursera or Udemy to boost your employability.";
         }
-        // General fallback - only show welcome for greetings
+        // General fallback
         else {
-            // Check if it's a greeting
-            if (preg_match('/^(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/i', $messageLower)) {
-                if ($isEmployer) {
-                    return "👋 **Welcome, Employer!**\n\n" .
-                           "I'm your AI hiring assistant. I can help you with:\n\n" .
-                           "📝 **Job Posting**\n" .
-                           "• Create professional job listings\n" .
-                           "• Write compelling descriptions\n\n" .
-                           "👥 **Candidate Management**\n" .
-                           "• Review applications\n" .
-                           "• Screen candidates\n\n" .
-                           "🎯 **Hiring Strategy**\n" .
-                           "• Set competitive salaries\n" .
-                           "• Attract top talent\n\n" .
-                           "Try saying: 'Create a job' to get started!";
-                }
-                return "👋 **Hi! I'm Your AI Career Advisor**\n\n" .
-                       "I'm here to help you land your dream job! Here's what I can do:\n\n" .
-                       "🔍 **Job Search**\n" .
-                       "• Find jobs matching your skills\n" .
-                       "• Get personalized recommendations\n\n" .
-                       "💼 **Application Help**\n" .
-                       "• Resume tips and optimization\n" .
-                       "• Cover letter guidance\n\n" .
-                       "🎯 **Interview Prep**\n" .
-                       "• Common questions practice\n" .
-                       "• Interview strategies\n\n" .
-                       "🚀 **Career Advice**\n" .
-                       "• Skill development tips\n" .
-                       "• Career growth strategies\n\n" .
-                       "**Quick Start:**\n" .
-                       "1. Type your skills for job matches\n" .
-                       "2. Upload your resume for analysis\n" .
-                       "3. Ask me anything about your job search!\n\n" .
-                       "What would you like help with today?";
+            if ($isEmployer) {
+                return "I'm here to help employers with job posting creation, candidate management, hiring strategies, and company branding. What can I assist you with today?";
             }
-            
-            // For other queries, provide a helpful response
-            return "I'm here to help with your career and job search! You can ask me about:\n\n" .
-                   "• Job opportunities and recommendations\n" .
-                   "• Resume and cover letter tips\n" .
-                   "• Interview preparation\n" .
-                   "• Career advice and skill development\n" .
-                   "• Company information and salary data\n\n" .
-                   "What specific question can I help you with?";
+            return "I'm here to help with your job search! You can ask me about finding jobs, applying for positions, interview preparation, resume tips, career advice, or check our job listings page. What would you like to know?";
         }
     }
 
@@ -794,26 +605,6 @@ class AiController extends Controller
                 'message' => $response,
             ]);
 
-            return response()->json(['response' => $response]);
-        }
-
-        // Check for cancel commands at any step
-        $messageLower = strtolower(trim($message));
-        if (str_contains($messageLower, 'cancel job') || 
-            str_contains($messageLower, 'stop job') || 
-            str_contains($messageLower, 'stop creating job') || 
-            str_contains($messageLower, 'cancel creating job') ||
-            $messageLower === 'cancel' ||
-            $messageLower === 'stop') {
-            Cache::forget($sessionKey);
-            $response = "Job creation cancelled. If you'd like to create a new job, just say 'create job' or 'post a job'.";
-            
-            ChatMessage::create([
-                'user_id' => $user->id,
-                'role' => 'bot',
-                'message' => $response,
-            ]);
-            
             return response()->json(['response' => $response]);
         }
 
@@ -963,7 +754,7 @@ class AiController extends Controller
     private function finalizeJobPosting($user, $data, $sessionKey)
     {
         try {
-            // Create the job with pending_approval status
+            // Create the job
             $job = Job::create([
                 'title' => $data['title'],
                 'location' => $data['location'],
@@ -971,45 +762,17 @@ class AiController extends Controller
                 'summary' => $data['summary'],
                 'description' => $data['description'],
                 'salary' => is_numeric($data['salary']) ? (float) $data['salary'] : null,
-                'company' => $user->name ?? 'Company',
+                'company' => $user->name ?? 'Company', // Use user's name as company or default
                 'user_id' => $user->id,
-                'status' => 'pending_approval',
-                'requirements' => [],
-            ]);
-
-            // Notify admin of new job awaiting approval
-            $admins = \App\Models\User::where('user_type', 'admin')->get();
-            foreach ($admins as $admin) {
-                \App\Models\Notification::create([
-                    'user_id' => $admin->id,
-                    'type' => 'job_awaiting_approval',
-                    'title' => 'New Job Awaiting Approval',
-                    'message' => "A new job post from {$user->name} is awaiting approval.",
-                    'data' => [
-                        'job_id' => $job->id,
-                        'job_title' => $job->title,
-                        'employer_name' => $user->name,
-                    ]
-                ]);
-            }
-
-            // Notify employer that job is pending approval
-            \App\Models\Notification::create([
-                'user_id' => $user->id,
-                'type' => 'job_pending_approval',
-                'title' => 'Job Submitted for Approval',
-                'message' => "Your job '{$data['title']}' has been submitted and is awaiting admin approval.",
-                'data' => [
-                    'job_id' => $job->id,
-                    'job_title' => $job->title,
-                ]
+                'status' => 'approved',
+                'requirements' => [], // Can be expanded later
             ]);
 
             // Clear the session
             Cache::forget($sessionKey);
 
-            $response = "🎉 Job submitted successfully! Your job '{$data['title']}' is now awaiting admin approval.\n\n";
-            $response .= "You'll be notified once it's approved. You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+            $response = "🎉 Job posted successfully! Your job '{$data['title']}' is now live and visible to job seekers.\n\n";
+            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
 
             // Save bot response
             ChatMessage::create([
@@ -1092,50 +855,22 @@ class AiController extends Controller
     private function createJobDirectly($parsedDetails, $user)
     {
         try {
-            // Create the job with pending_approval status
+            // Create the job with parsed details
             $job = Job::create([
                 'title' => $parsedDetails['job'],
                 'location' => $parsedDetails['location'],
                 'type' => $parsedDetails['type'] ?? 'full-time',
-                'summary' => 'Job created via AI chat',
-                'description' => 'Job description to be updated by employer.',
+                'summary' => 'Job created via AI chat', // Default summary
+                'description' => 'Job description to be updated by employer.', // Default description
                 'salary' => is_numeric($parsedDetails['salary']) ? (float) $parsedDetails['salary'] : null,
                 'company' => $parsedDetails['company'] ?? $user->name ?? 'Company',
                 'user_id' => $user->id,
-                'status' => 'pending_approval',
+                'status' => 'approved',
                 'requirements' => [],
             ]);
 
-            // Notify admin of new job awaiting approval
-            $admins = \App\Models\User::where('user_type', 'admin')->get();
-            foreach ($admins as $admin) {
-                \App\Models\Notification::create([
-                    'user_id' => $admin->id,
-                    'type' => 'job_awaiting_approval',
-                    'title' => 'New Job Awaiting Approval',
-                    'message' => "A new job post from {$user->name} is awaiting approval.",
-                    'data' => [
-                        'job_id' => $job->id,
-                        'job_title' => $job->title,
-                        'employer_name' => $user->name,
-                    ]
-                ]);
-            }
-
-            // Notify employer that job is pending approval
-            \App\Models\Notification::create([
-                'user_id' => $user->id,
-                'type' => 'job_pending_approval',
-                'title' => 'Job Submitted for Approval',
-                'message' => "Your job '{$parsedDetails['job']}' has been submitted and is awaiting admin approval.",
-                'data' => [
-                    'job_id' => $job->id,
-                    'job_title' => $job->title,
-                ]
-            ]);
-
-            $response = "🎉 Job submitted successfully! Your job '{$parsedDetails['job']}' is now awaiting admin approval.\n\n";
-            $response .= "You'll be notified once it's approved. You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+            $response = "🎉 Job posted successfully! Your job '{$parsedDetails['job']}' is now live and visible to job seekers.\n\n";
+            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
 
             // Save bot response
             ChatMessage::create([
@@ -1162,198 +897,6 @@ class AiController extends Controller
         }
     }
 
-    private function basicResumeAnalysis($resumeText)
-    {
-        $text = strtolower($resumeText);
-        
-        // Comprehensive skill categories
-        $skillCategories = [
-            'programming' => ['javascript', 'python', 'java', 'php', 'c++', 'c#', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'typescript'],
-            'web_frontend' => ['react', 'angular', 'vue', 'html', 'css', 'tailwind', 'bootstrap', 'jquery', 'redux', 'ui/ux', 'responsive design'],
-            'web_backend' => ['node', 'nodejs', 'laravel', 'django', 'flask', 'spring', 'express', 'rest api', 'restful', 'graphql', 'microservices'],
-            'database' => ['sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'database'],
-            'devops' => ['docker', 'kubernetes', 'aws', 'azure', 'git', 'jenkins', 'ci/cd', 'devops'],
-            'methodology' => ['agile', 'scrum', 'project management'],
-            'design' => ['photoshop', 'illustrator', 'figma', 'sketch', 'graphic design', 'web design'],
-            'data' => ['machine learning', 'data analysis', 'excel', 'powerpoint'],
-            'soft_skills' => ['communication', 'leadership', 'teamwork', 'problem solving']
-        ];
-        
-        $foundSkills = [];
-        $skillsByCategory = [];
-        
-        foreach ($skillCategories as $category => $skills) {
-            foreach ($skills as $skill) {
-                if (str_contains($text, $skill)) {
-                    $skillName = ucwords($skill);
-                    $foundSkills[] = $skillName;
-                    $skillsByCategory[$category][] = $skillName;
-                }
-            }
-        }
-        
-        // Extract skills from Skills section
-        if (preg_match('/skills?[:\s]+([^\n]{10,300})/i', $resumeText, $matches)) {
-            $skillsLine = $matches[1];
-            $extractedSkills = preg_split('/[,;|]/', $skillsLine);
-            foreach ($extractedSkills as $skill) {
-                $skill = trim($skill);
-                if (strlen($skill) > 2 && strlen($skill) < 30 && !in_array(ucwords(strtolower($skill)), $foundSkills)) {
-                    $foundSkills[] = ucwords(strtolower($skill));
-                }
-            }
-        }
-        
-        // Enhanced experience extraction
-        $experienceYears = 'Unknown';
-        $totalYears = 0;
-        
-        // Look for explicit year mentions
-        if (preg_match('/(\d+)\+?\s*years?\s+(?:of\s+)?experience/i', $resumeText, $matches)) {
-            $experienceYears = $matches[1] . ' years';
-            $totalYears = (int)$matches[1];
-        } 
-        // Calculate from date ranges (e.g., 2020-2023)
-        elseif (preg_match_all('/(\d{4})\s*[-–—]\s*(\d{4}|present)/i', $resumeText, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $startYear = (int)$match[1];
-                $endYear = strtolower($match[2]) === 'present' ? date('Y') : (int)$match[2];
-                $totalYears += ($endYear - $startYear);
-            }
-            if ($totalYears > 0) {
-                $experienceYears = $totalYears . ' years';
-            }
-        }
-        
-        // Detect education
-        $education = [];
-        if (preg_match('/bachelor|b\.?s\.?|b\.?a\.?/i', $resumeText)) {
-            $education[] = "Bachelor's Degree";
-        }
-        if (preg_match('/master|m\.?s\.?|m\.?a\.?|mba/i', $resumeText)) {
-            $education[] = "Master's Degree";
-        }
-        if (preg_match('/phd|ph\.?d\.?|doctorate/i', $resumeText)) {
-            $education[] = 'PhD';
-        }
-        
-        // Determine experience level with more intelligence
-        $experienceLevel = 'entry';
-        if ($totalYears > 0) {
-            if ($totalYears >= 7) $experienceLevel = 'senior';
-            elseif ($totalYears >= 3) $experienceLevel = 'mid';
-        } elseif (preg_match('/(senior|lead|principal|architect)/i', $resumeText)) {
-            $experienceLevel = 'senior';
-        } elseif (preg_match('/(junior|intern|entry)/i', $resumeText)) {
-            $experienceLevel = 'entry';
-        } elseif (!empty($foundSkills) && count($foundSkills) > 10) {
-            $experienceLevel = 'mid'; // Many skills suggest mid-level
-        }
-        
-        // Generate intelligent summary
-        $summary = $this->generateResumeSummary($resumeText, $foundSkills, $experienceYears, $education, $skillsByCategory);
-        
-        return [
-            'skills' => array_unique($foundSkills),
-            'experience_years' => $experienceYears,
-            'education' => $education,
-            'certifications' => [],
-            'languages' => [],
-            'summary' => $summary,
-            'strengths' => $this->identifyStrengths($skillsByCategory, $foundSkills),
-            'experience_level' => $experienceLevel,
-            'key_achievements' => []
-        ];
-    }
-
-    private function identifyStrengths($skillsByCategory, $allSkills)
-    {
-        $strengths = [];
-        
-        // Identify primary skill area
-        $maxCount = 0;
-        $primaryCategory = '';
-        foreach ($skillsByCategory as $category => $skills) {
-            if (count($skills) > $maxCount) {
-                $maxCount = count($skills);
-                $primaryCategory = $category;
-            }
-        }
-        
-        // Build strengths based on categories
-        if (!empty($skillsByCategory['programming'])) {
-            $strengths[] = 'Programming: ' . implode(', ', array_slice($skillsByCategory['programming'], 0, 3));
-        }
-        if (!empty($skillsByCategory['web_frontend']) || !empty($skillsByCategory['web_backend'])) {
-            $webSkills = array_merge($skillsByCategory['web_frontend'] ?? [], $skillsByCategory['web_backend'] ?? []);
-            $strengths[] = 'Web Development: ' . implode(', ', array_slice($webSkills, 0, 3));
-        }
-        if (!empty($skillsByCategory['database'])) {
-            $strengths[] = 'Database: ' . implode(', ', array_slice($skillsByCategory['database'], 0, 2));
-        }
-        
-        return !empty($strengths) ? $strengths : array_slice($allSkills, 0, 3);
-    }
-
-    private function generateResumeSummary($resumeText, $skills, $experienceYears, $education, $skillsByCategory = [])
-    {
-        $lines = explode("\n", $resumeText);
-        $name = '';
-        $title = '';
-        
-        // Try to extract name (usually first line)
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (strlen($line) > 3 && strlen($line) < 50 && !str_contains(strtolower($line), 'resume')) {
-                if (preg_match('/^[A-Z][a-z]+\s+[A-Z][a-z]+/', $line)) {
-                    $name = $line;
-                    break;
-                }
-            }
-        }
-        
-        // Try to extract job title or objective
-        $text = strtolower($resumeText);
-        if (preg_match('/(?:objective|summary|profile)[:\s]+([^\n]{20,150})/i', $resumeText, $matches)) {
-            $title = trim($matches[1]);
-        } elseif (preg_match('/(?:developer|engineer|designer|manager|analyst|specialist|consultant|coordinator|assistant|teacher|professor)[^\n]{0,50}/i', $resumeText, $matches)) {
-            $title = trim($matches[0]);
-        }
-        
-        // Build summary
-        $summary = '';
-        
-        if ($name) {
-            $summary .= $name;
-            if ($title) {
-                $summary .= ' - ' . $title;
-            }
-        } elseif ($title) {
-            $summary .= 'Professional: ' . $title;
-        } else {
-            $summary .= 'Professional';
-        }
-        
-        if (!empty($skills)) {
-            $skillCount = count($skills);
-            $topSkills = array_slice($skills, 0, 5);
-            $summary .= '. Skilled in ' . implode(', ', $topSkills);
-            if ($skillCount > 5) {
-                $summary .= ' and ' . ($skillCount - 5) . ' more';
-            }
-        }
-        
-        if ($experienceYears !== 'Unknown') {
-            $summary .= '. ' . $experienceYears . ' of experience';
-        }
-        
-        if (!empty($education)) {
-            $summary .= '. Education: ' . implode(', ', $education);
-        }
-        
-        return $summary . '.';
-    }
-
     public function jobAction(Request $request)
     {
         $request->validate([
@@ -1373,7 +916,7 @@ class AiController extends Controller
 
         try {
             if ($action === 'approve') {
-                // Create the job with pending_approval status
+                // Create the job
                 $job = Job::create([
                     'title' => $jobDraft['title'],
                     'location' => $jobDraft['location'] ?? '',
@@ -1383,40 +926,12 @@ class AiController extends Controller
                     'salary' => is_numeric($jobDraft['salary']) ? (float) $jobDraft['salary'] : null,
                     'company' => $user->name ?? 'Company',
                     'user_id' => $user->id,
-                    'status' => 'pending_approval',
+                    'status' => 'approved',
                     'requirements' => [],
                 ]);
 
-                // Notify admin of new job awaiting approval
-                $admins = \App\Models\User::where('user_type', 'admin')->get();
-                foreach ($admins as $admin) {
-                    \App\Models\Notification::create([
-                        'user_id' => $admin->id,
-                        'type' => 'job_awaiting_approval',
-                        'title' => 'New Job Awaiting Approval',
-                        'message' => "A new job post from {$user->name} is awaiting approval.",
-                        'data' => [
-                            'job_id' => $job->id,
-                            'job_title' => $job->title,
-                            'employer_name' => $user->name,
-                        ]
-                    ]);
-                }
-
-                // Notify employer that job is pending approval
-                \App\Models\Notification::create([
-                    'user_id' => $user->id,
-                    'type' => 'job_pending_approval',
-                    'title' => 'Job Submitted for Approval',
-                    'message' => "Your job '{$jobDraft['title']}' has been submitted and is awaiting admin approval.",
-                    'data' => [
-                        'job_id' => $job->id,
-                        'job_title' => $job->title,
-                    ]
-                ]);
-
-                $response = "🎉 Job submitted successfully! Your job '{$jobDraft['title']}' is now awaiting admin approval.\n\n";
-                $response .= "You'll be notified once it's approved. You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+                $response = "🎉 Job posted successfully! Your job '{$jobDraft['title']}' is now live and visible to job seekers.\n\n";
+                $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
 
             } elseif ($action === 'edit') {
                 // For edit, we need to ask which field to update

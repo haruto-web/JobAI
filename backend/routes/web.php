@@ -9,7 +9,16 @@ Route::get('/ping', function () {
 });
 
 Route::get('/', function () {
-    return view('welcome');
+    try {
+        return view('welcome');
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'app_running' => true,
+            'laravel_version' => app()->version()
+        ], 500);
+    }
 });
 
 Route::get('/debug', function () {

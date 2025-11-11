@@ -182,12 +182,18 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
-            if ($user->profile_image && !str_contains($user->profile_image, 'http')) {
-                Storage::disk('public')->delete($user->profile_image);
+            if ($user->profile_image && str_contains($user->profile_image, 'cloudinary')) {
+                $publicId = $this->extractCloudinaryPublicId($user->profile_image);
+                if ($publicId) {
+                    cloudinary()->uploadApi()->destroy($publicId);
+                }
             }
 
-            $path = $request->file('profile_image')->store('profile_images', 'public');
-            $user->profile_image = $path;
+            $result = cloudinary()->uploadApi()->upload($request->file('profile_image')->getRealPath(), [
+                'folder' => 'profile_images'
+            ]);
+
+            $user->profile_image = $result['secure_url'];
             $user->save();
 
             return response()->json($user);

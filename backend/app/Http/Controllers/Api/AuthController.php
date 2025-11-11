@@ -182,6 +182,8 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
+            Log::info('Starting profile image upload', ['file' => $request->file('profile_image')->getClientOriginalName()]);
+            
             if ($user->profile_image && str_contains($user->profile_image, 'cloudinary')) {
                 $publicId = $this->extractCloudinaryPublicId($user->profile_image);
                 if ($publicId) {
@@ -193,12 +195,19 @@ class AuthController extends Controller
                 'folder' => 'profile_images'
             ]);
 
+            Log::info('Cloudinary result', ['result' => $result]);
+
+            if (!$result || !isset($result['secure_url'])) {
+                Log::error('Cloudinary result is null or missing secure_url', ['result' => $result]);
+                throw new \Exception('Cloudinary upload failed - no URL returned');
+            }
+
             $user->profile_image = $result['secure_url'];
             $user->save();
 
             return response()->json($user);
         } catch (\Exception $e) {
-            Log::error('Profile image upload failed', ['error' => $e->getMessage()]);
+            Log::error('Profile image upload failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['message' => 'Failed to upload image: ' . $e->getMessage()], 500);
         }
     }

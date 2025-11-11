@@ -19,6 +19,15 @@ import ChatBot from './components/ChatBot';
 import './App.css';
 import './responsive.css';
 
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+`;
+document.head.appendChild(style);
+
 // const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 function App() {
@@ -26,6 +35,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [shownNotifications, setShownNotifications] = useState(new Set());
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogin = async (email, password) => {
     try {
@@ -78,6 +90,39 @@ function App() {
       setUser(null);
     }
   };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      const pollNotifications = setInterval(async () => {
+        try {
+          const response = await api.get('/user/notifications');
+          const unread = response.data.filter(n => !n.read);
+          setUnreadCount(unread.length);
+          
+          const newUnread = unread.filter(n => !shownNotifications.has(n.id));
+          if (newUnread.length > 0) {
+            const newNotification = newUnread[0];
+            setNotification(newNotification);
+            setShownNotifications(prev => new Set([...prev, newNotification.id]));
+          }
+        } catch (error) {
+          console.error('Failed to fetch notifications:', error);
+        }
+      }, 3000);
+
+      return () => clearInterval(pollNotifications);
+    }
+  }, [isLoggedIn, shownNotifications]);
+
+  useEffect(() => {
+    const handleClick = () => {
+      if (notification) {
+        setNotification(null);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [notification]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -134,6 +179,8 @@ function App() {
         onRegister={handleRegister}
         onLogout={handleLogout}
         userType={user?.user_type}
+        unreadCount={unreadCount}
+        onNotificationRead={() => setNotification(null)}
       />
       <div style={{ marginTop: '0' }}>
         <Routes>
@@ -151,6 +198,24 @@ function App() {
           <Route path="/admin" element={isLoggedIn && user?.user_type === 'admin' ? <AdminDashboard /> : <Navigate to="/login" />} />
         </Routes>
       </div>
+      {notification && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          backgroundColor: '#fff',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          padding: '15px 20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          maxWidth: '350px',
+          zIndex: 9999,
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#333' }}>{notification.title}</div>
+          <div style={{ fontSize: '14px', color: '#666' }}>{notification.message}</div>
+        </div>
+      )}
       {isLoggedIn && <ChatBot isOpen={chatOpen} onToggle={() => setChatOpen(!chatOpen)} />}
     </Router>
   );

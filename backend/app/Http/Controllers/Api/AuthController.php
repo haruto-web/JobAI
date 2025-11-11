@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\DB;
 use App\Services\OpenAIService;
 use App\Services\ResumeParserService;
 
@@ -31,7 +32,7 @@ class AuthController extends Controller
         try {
             $token = Str::random(64);
             
-            \DB::table('password_reset_tokens')->updateOrInsert(
+            DB::table('password_reset_tokens')->updateOrInsert(
                 ['email' => $validated['email']],
                 [
                     'email' => $validated['email'],
@@ -181,20 +182,12 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
-            $uploadedFile = $request->file('profile_image');
-            
-            // Upload to Cloudinary using the helper
-            $result = $uploadedFile->storeOnCloudinary('avatars');
-            
-            // Delete old image from Cloudinary if exists
-            if ($user->getAttribute('profile_image') && str_contains($user->getAttribute('profile_image'), 'cloudinary')) {
-                $publicId = $this->extractCloudinaryPublicId($user->getAttribute('profile_image'));
-                if ($publicId) {
-                    cloudinary()->destroy($publicId);
-                }
+            if ($user->profile_image && !str_contains($user->profile_image, 'http')) {
+                Storage::disk('public')->delete($user->profile_image);
             }
 
-            $user->setAttribute('profile_image', $result->getSecurePath());
+            $path = $request->file('profile_image')->store('profile_images', 'public');
+            $user->profile_image = $path;
             $user->save();
 
             return response()->json($user);

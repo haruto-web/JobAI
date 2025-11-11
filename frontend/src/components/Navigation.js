@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
 import './Navigation.css';
 
-function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
+function Navigation({ isLoggedIn, onLogin, onLogout, userType, unreadCount, onNotificationRead }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -90,7 +90,7 @@ function Navigation({ isLoggedIn, onLogin, onLogout, userType }) {
         <div className="nav-auth">
           {isLoggedIn ? (
             <div className="user-menu">
-              <NotificationBell isLoggedIn={isLoggedIn} />
+              <NotificationBell isLoggedIn={isLoggedIn} unreadCount={unreadCount} onNotificationRead={onNotificationRead} />
               <button onClick={onLogout} className="logout-btn">
                 Sign Out
               </button>

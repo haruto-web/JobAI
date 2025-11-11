@@ -4,9 +4,8 @@ import './NotificationBell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
-function NotificationBell({ isLoggedIn }) {
+function NotificationBell({ isLoggedIn, unreadCount, onNotificationRead }) {
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -28,9 +27,7 @@ function NotificationBell({ isLoggedIn }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(response.data);
-      setUnreadCount(response.data.filter(n => !n.read).length);
     } catch (error) {
-      // Clear invalid token on 401
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
       } else {
@@ -48,11 +45,10 @@ function NotificationBell({ isLoggedIn }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Update local state
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, read: true, read_at: new Date().toISOString() } : n)
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      if (onNotificationRead) onNotificationRead();
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -65,11 +61,10 @@ function NotificationBell({ isLoggedIn }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Update local state
       setNotifications(prev => 
         prev.map(n => ({ ...n, read: true, read_at: new Date().toISOString() }))
       );
-      setUnreadCount(0);
+      if (onNotificationRead) onNotificationRead();
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }

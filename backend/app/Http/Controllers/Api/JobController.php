@@ -110,6 +110,15 @@ class JobController extends Controller
             ]);
         }
 
+        // Notify employer that job is pending approval
+        Notification::create([
+            'user_id' => $user->id,
+            'type' => 'job_created',
+            'title' => '⏳ Job Created - Pending Approval',
+            'message' => "Your job '{$job->title}' has been created successfully. Please wait for the admin to approve your job. Thank you!",
+            'data' => ['job_id' => $job->id]
+        ]);
+
         return response()->json($job, 201);
     }
 

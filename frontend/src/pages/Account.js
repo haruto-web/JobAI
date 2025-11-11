@@ -41,7 +41,7 @@ function Account({ isLoggedIn }) {
               bio: response.data.profile.bio || '',
               skills: response.data.profile.skills || [],
               experience_level: response.data.profile.experience_level || '',
-              years_of_experience: response.data.profile.years_of_experience || '',
+              years_of_experience: response.data.profile.years_of_experience !== null && response.data.profile.years_of_experience !== undefined ? String(response.data.profile.years_of_experience) : '',
               education_attainment: response.data.profile.education_attainment || ''
             });
           }
@@ -128,9 +128,13 @@ function Account({ isLoggedIn }) {
       if (profileData.skills && profileData.skills.length > 0) {
         dataToSend.skills = profileData.skills.filter(s => s.trim() !== '');
       }
-      if (profileData.experience_level && profileData.experience_level.trim()) dataToSend.experience_level = profileData.experience_level;
+      if (profileData.experience_level && profileData.experience_level.trim() && profileData.experience_level !== '') {
+        dataToSend.experience_level = profileData.experience_level.trim();
+      }
       if (profileData.years_of_experience && profileData.years_of_experience !== '') dataToSend.years_of_experience = parseInt(profileData.years_of_experience);
-      if (profileData.education_attainment && profileData.education_attainment.trim()) dataToSend.education_attainment = profileData.education_attainment;
+      if (profileData.education_attainment && profileData.education_attainment.trim() && profileData.education_attainment !== '') {
+        dataToSend.education_attainment = profileData.education_attainment.trim();
+      }
       
       await axios.put(`${API_URL}/user/profile`, dataToSend, {
         headers: { Authorization: `Bearer ${token}` }

@@ -662,8 +662,8 @@ function Dashboard() {
                         </div>
                       )}
                       {job.status === 'pending_approval' && (
-                        <div className="pending-notice" style={{ backgroundColor: '#fff3cd', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
-                          <p><strong>⏳ Pending Approval:</strong> Your job is awaiting admin approval. It will be visible to job seekers once approved.</p>
+                        <div className="pending-notice" style={{ backgroundColor: '#d4edda', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
+                          <p style={{ color: '#155724' }}><strong>⏳ Pending Approval:</strong> Your job is awaiting admin approval. It will be visible to job seekers once approved.</p>
                         </div>
                       )}
                       {job.status === 'approved' && (

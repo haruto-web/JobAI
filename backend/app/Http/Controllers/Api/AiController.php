@@ -10,6 +10,7 @@ use App\Services\WebSearchService;
 use App\Models\Job;
 use App\Models\ChatMessage;
 use App\Models\UserProfile;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -291,7 +292,7 @@ class AiController extends Controller
                 $searchResults = $webSearchService->search($message, 5);
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::info('Web search not available', ['error' => $e->getMessage()]);
+            Log::info('Web search not available', ['error' => $e->getMessage()]);
         }
 
         // If OpenAI key is not configured, provide a simple fallback response
@@ -337,9 +338,9 @@ class AiController extends Controller
 
             // Different system prompt based on user type
             if ($user->user_type === 'employer') {
-                $systemPrompt = "You are an AI assistant for employers on a job recommendation website. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Common topics include: creating effective job descriptions, reviewing applications, interview scheduling, hiring best practices, and managing job listings. Be professional, helpful, and focused on employer needs. Provide actionable advice for successful hiring.";
+                $systemPrompt = "You are an AI assistant for employers on a job recommendation website. The current year is 2025. Help employers with job posting creation, candidate management, hiring strategies, and company branding. Common topics include: creating effective job descriptions, reviewing applications, interview scheduling, hiring best practices, and managing job listings. Be professional, helpful, and focused on employer needs. Provide actionable advice for successful hiring.";
             } else {
-                $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Common topics include: finding jobs by location/skill/type, applying for jobs, uploading resumes, cover letter tips, company details, interview preparation, application status, and career improvement. Be friendly, helpful, and professional. Use the provided context about the user when relevant. If asked about specific jobs, reference available job listings. Provide actionable advice and keep responses concise but informative. Always encourage next steps and offer to help further.";
+                $systemPrompt = "You are an AI career advisor chatbot for a job recommendation website. The current year is 2025. Help users with job search & matching, application help, company information, interview assistance, status updates, and career advice. Common topics include: finding jobs by location/skill/type, applying for jobs, uploading resumes, cover letter tips, company details, interview preparation, application status, and career improvement. Be friendly, helpful, and professional. Use the provided context about the user when relevant. If asked about specific jobs, reference available job listings. Provide actionable advice and keep responses concise but informative. Always encourage next steps and offer to help further.";
             }
 
             // Fetch recent chat history
@@ -410,6 +411,18 @@ class AiController extends Controller
             ->get(['role', 'message', 'created_at']);
 
         return response()->json(['messages' => $messages]);
+    }
+
+    public function deleteChatHistory(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        ChatMessage::where('user_id', $user->id)->delete();
+
+        return response()->json(['message' => 'Chat history deleted successfully']);
     }
 
     private function generateFallbackResponse($message, $user)
@@ -762,19 +775,44 @@ class AiController extends Controller
                 'summary' => $data['summary'],
                 'description' => $data['description'],
                 'salary' => is_numeric($data['salary']) ? (float) $data['salary'] : null,
-                'company' => $user->name ?? 'Company', // Use user's name as company or default
+                'company' => $user->name ?? 'Company',
                 'user_id' => $user->id,
-                'status' => 'approved',
-                'requirements' => [], // Can be expanded later
+                'status' => 'pending',
+                'requirements' => [],
             ]);
 
-            // Clear the session
+            // Notify admin
+            try {
+                $admin = \App\Models\User::where('user_type', 'admin')->first();
+                if ($admin) {
+                    Notification::create([
+                        'user_id' => $admin->id,
+                        'type' => 'job_pending',
+                        'title' => '📋 New Job Pending Approval',
+                        'message' => "Employer {$user->name} created a job '{$data['title']}' that needs your approval.",
+                        'data' => ['job_id' => $job->id]
+                    ]);
+                    Log::info('Admin notification created', ['admin_id' => $admin->id, 'job_id' => $job->id]);
+                }
+
+                // Notify employer
+                Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'job_created',
+                    'title' => '⏳ Job Created - Pending Approval',
+                    'message' => "Your job '{$data['title']}' has been created successfully. Please wait for the admin to approve your job. Thank you!",
+                    'data' => ['job_id' => $job->id]
+                ]);
+                Log::info('Employer notification created', ['user_id' => $user->id, 'job_id' => $job->id]);
+            } catch (\Exception $e) {
+                Log::error('Failed to create notifications', ['error' => $e->getMessage()]);
+            }
+
             Cache::forget($sessionKey);
 
-            $response = "🎉 Job posted successfully! Your job '{$data['title']}' is now live and visible to job seekers.\n\n";
-            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+            $response = "✅ Job created successfully! Your job '{$data['title']}' is pending admin approval.\n\n";
+            $response .= "You'll be notified once it's approved and visible to job seekers.";
 
-            // Save bot response
             ChatMessage::create([
                 'user_id' => $user->id,
                 'role' => 'bot',
@@ -788,7 +826,6 @@ class AiController extends Controller
 
             $response = "Sorry, there was an error posting your job. Please try again or contact support.";
 
-            // Save bot response
             ChatMessage::create([
                 'user_id' => $user->id,
                 'role' => 'bot',
@@ -855,24 +892,41 @@ class AiController extends Controller
     private function createJobDirectly($parsedDetails, $user)
     {
         try {
-            // Create the job with parsed details
             $job = Job::create([
                 'title' => $parsedDetails['job'],
                 'location' => $parsedDetails['location'],
                 'type' => $parsedDetails['type'] ?? 'full-time',
-                'summary' => 'Job created via AI chat', // Default summary
-                'description' => 'Job description to be updated by employer.', // Default description
+                'summary' => 'Job created via AI chat',
+                'description' => 'Job description to be updated by employer.',
                 'salary' => is_numeric($parsedDetails['salary']) ? (float) $parsedDetails['salary'] : null,
                 'company' => $parsedDetails['company'] ?? $user->name ?? 'Company',
                 'user_id' => $user->id,
-                'status' => 'approved',
+                'status' => 'pending',
                 'requirements' => [],
             ]);
 
-            $response = "🎉 Job posted successfully! Your job '{$parsedDetails['job']}' is now live and visible to job seekers.\n\n";
-            $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+            $admin = \App\Models\User::where('user_type', 'admin')->first();
+            if ($admin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'type' => 'job_pending',
+                    'title' => '📋 New Job Pending Approval',
+                    'message' => "Employer {$user->name} created a job '{$parsedDetails['job']}' that needs your approval.",
+                    'data' => ['job_id' => $job->id]
+                ]);
+            }
 
-            // Save bot response
+            Notification::create([
+                'user_id' => $user->id,
+                'type' => 'job_created',
+                'title' => '⏳ Job Created - Pending Approval',
+                'message' => "Your job '{$parsedDetails['job']}' has been created successfully. Please wait for the admin to approve your job. Thank you!",
+                'data' => ['job_id' => $job->id]
+            ]);
+
+            $response = "✅ Job created successfully! Your job '{$parsedDetails['job']}' is pending admin approval.\n\n";
+            $response .= "You'll be notified once it's approved and visible to job seekers.";
+
             ChatMessage::create([
                 'user_id' => $user->id,
                 'role' => 'bot',
@@ -886,7 +940,6 @@ class AiController extends Controller
 
             $response = "Sorry, there was an error posting your job. Please try again or contact support.";
 
-            // Save bot response
             ChatMessage::create([
                 'user_id' => $user->id,
                 'role' => 'bot',
@@ -916,7 +969,6 @@ class AiController extends Controller
 
         try {
             if ($action === 'approve') {
-                // Create the job
                 $job = Job::create([
                     'title' => $jobDraft['title'],
                     'location' => $jobDraft['location'] ?? '',
@@ -926,12 +978,31 @@ class AiController extends Controller
                     'salary' => is_numeric($jobDraft['salary']) ? (float) $jobDraft['salary'] : null,
                     'company' => $user->name ?? 'Company',
                     'user_id' => $user->id,
-                    'status' => 'approved',
+                    'status' => 'pending',
                     'requirements' => [],
                 ]);
 
-                $response = "🎉 Job posted successfully! Your job '{$jobDraft['title']}' is now live and visible to job seekers.\n\n";
-                $response .= "You can view and manage this job in your employer dashboard under 'My Job Posts'.";
+                $admin = \App\Models\User::where('user_type', 'admin')->first();
+                if ($admin) {
+                    Notification::create([
+                        'user_id' => $admin->id,
+                        'type' => 'job_pending',
+                        'title' => '📋 New Job Pending Approval',
+                        'message' => "Employer {$user->name} created a job '{$jobDraft['title']}' that needs your approval.",
+                        'data' => ['job_id' => $job->id]
+                    ]);
+                }
+
+                Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'job_created',
+                    'title' => '⏳ Job Created - Pending Approval',
+                    'message' => "Your job '{$jobDraft['title']}' has been created successfully. Please wait for the admin to approve your job. Thank you!",
+                    'data' => ['job_id' => $job->id]
+                ]);
+
+                $response = "✅ Job created successfully! Your job '{$jobDraft['title']}' is pending admin approval.\n\n";
+                $response .= "You'll be notified once it's approved and visible to job seekers.";
 
             } elseif ($action === 'edit') {
                 // For edit, we need to ask which field to update

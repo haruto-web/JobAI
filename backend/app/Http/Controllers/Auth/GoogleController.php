@@ -58,8 +58,10 @@ class GoogleController extends Controller
             }
 
         } catch (\Exception $e) {
+            \Log::error('Google OAuth error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-            return redirect("{$frontendUrl}/login?error=google_auth_failed");
+            $error = urlencode($e->getMessage());
+            return redirect("{$frontendUrl}/login?error=google_auth_failed&details={$error}");
         }
     }
 }

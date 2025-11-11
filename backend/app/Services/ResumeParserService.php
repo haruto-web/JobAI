@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Smalot\PdfParser\Parser as PdfParser;
 use PhpOffice\PhpWord\IOFactory;
+use Illuminate\Support\Facades\Log;
 
 class ResumeParserService
 {
@@ -24,7 +25,9 @@ class ResumeParserService
     {
         $parser = new PdfParser();
         $pdf = $parser->parseFile($filePath);
-        return $pdf->getText();
+        $text = $pdf->getText();
+        Log::info('PDF parsed', ['length' => strlen($text)]);
+        return $text;
     }
 
     private function parseDocx($filePath)
@@ -46,6 +49,7 @@ class ResumeParserService
             }
         }
 
+        Log::info('DOCX parsed', ['length' => strlen($text)]);
         return $text;
     }
 }

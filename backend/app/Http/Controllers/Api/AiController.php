@@ -41,30 +41,21 @@ class AiController extends Controller
                 return response()->json(['message' => 'Unsupported file type or could not parse resume. Please upload a PDF or Word document.'], 400);
             }
 
-            // Analyze resume with OpenAI if available; on failure, fall back to a safe default analysis
+            // Analyze resume with OpenAI if available; on failure, fall back to basic text analysis
             $analysis = null;
             $openai = null;
             try {
                 if (is_string(config('services.openai.api_key')) && trim(config('services.openai.api_key')) !== '') {
                     $openai = new OpenAIService();
                     $analysis = $openai->analyzeResumeComprehensively($resumeText);
+                    Log::info('OpenAI analysis successful', ['user_id' => $user->id]);
                 } else {
-                    Log::info('OpenAI API key not configured; skipping AI analysis', ['user_id' => $user->id]);
+                    Log::info('OpenAI API key not configured; using basic analysis', ['user_id' => $user->id]);
+                    $analysis = $this->basicResumeAnalysis($resumeText);
                 }
             } catch (\Throwable $e) {
-                // Log the error but continue with a sensible fallback so the endpoint doesn't return 500
-                Log::error('Resume analysis failed', ['error' => $e->getMessage(), 'user_id' => $user->id]);
-                $analysis = [
-                    'skills' => [],
-                    'experience_years' => 'Unknown',
-                    'education' => [],
-                    'certifications' => [],
-                    'languages' => [],
-                    'summary' => 'AI analysis unavailable at the moment',
-                    'strengths' => [],
-                    'experience_level' => 'entry',
-                    'key_achievements' => []
-                ];
+                Log::error('OpenAI analysis failed, using basic analysis', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+                $analysis = $this->basicResumeAnalysis($resumeText);
             }
 
             // Update user profile with analysis
@@ -1102,6 +1093,68 @@ class AiController extends Controller
 
             return response()->json(['response' => $response]);
         }
+    }
+
+    private function basicResumeAnalysis($resumeText)
+    {
+        $text = strtolower($resumeText);
+        
+        // Extract skills using keyword matching
+        $commonSkills = [
+            'javascript', 'python', 'java', 'php', 'react', 'angular', 'vue', 'node', 'nodejs',
+            'sql', 'mysql', 'postgresql', 'mongodb', 'html', 'css', 'typescript', 'c++', 'c#',
+            'ruby', 'go', 'rust', 'swift', 'kotlin', 'docker', 'kubernetes', 'aws', 'azure',
+            'git', 'agile', 'scrum', 'rest', 'api', 'microservices', 'devops', 'ci/cd',
+            'machine learning', 'data analysis', 'excel', 'powerpoint', 'word', 'communication',
+            'leadership', 'project management', 'teamwork', 'problem solving'
+        ];
+        
+        $foundSkills = [];
+        foreach ($commonSkills as $skill) {
+            if (str_contains($text, $skill)) {
+                $foundSkills[] = ucwords($skill);
+            }
+        }
+        
+        // Estimate experience years
+        $experienceYears = 'Unknown';
+        if (preg_match('/(\d+)\+?\s*years?/i', $resumeText, $matches)) {
+            $experienceYears = $matches[1] . ' years';
+        } elseif (preg_match('/experience.*?(\d+)/i', $resumeText, $matches)) {
+            $experienceYears = $matches[1] . ' years';
+        }
+        
+        // Detect education
+        $education = [];
+        if (preg_match('/bachelor|b\.?s\.?|b\.?a\.?/i', $resumeText)) {
+            $education[] = "Bachelor's Degree";
+        }
+        if (preg_match('/master|m\.?s\.?|m\.?a\.?|mba/i', $resumeText)) {
+            $education[] = "Master's Degree";
+        }
+        if (preg_match('/phd|ph\.?d\.?|doctorate/i', $resumeText)) {
+            $education[] = 'PhD';
+        }
+        
+        // Determine experience level
+        $experienceLevel = 'entry';
+        if (preg_match('/(\d+)/', $experienceYears, $matches)) {
+            $years = (int)$matches[1];
+            if ($years >= 7) $experienceLevel = 'senior';
+            elseif ($years >= 3) $experienceLevel = 'mid';
+        }
+        
+        return [
+            'skills' => array_unique($foundSkills),
+            'experience_years' => $experienceYears,
+            'education' => $education,
+            'certifications' => [],
+            'languages' => [],
+            'summary' => 'Resume analyzed using basic text extraction',
+            'strengths' => !empty($foundSkills) ? array_slice($foundSkills, 0, 3) : [],
+            'experience_level' => $experienceLevel,
+            'key_achievements' => []
+        ];
     }
 
     public function jobAction(Request $request)

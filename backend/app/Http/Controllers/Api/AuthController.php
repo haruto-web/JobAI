@@ -181,9 +181,9 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
-            // Upload to Cloudinary using Cloudinary facade
+            // Upload to Cloudinary
             $uploadedFile = $request->file('profile_image');
-            $result = \Cloudinary\Cloudinary::uploadApi()->upload($uploadedFile->getRealPath(), [
+            $result = cloudinary()->uploadApi()->upload($uploadedFile->getRealPath(), [
                 'folder' => 'avatars',
                 'transformation' => [
                     ['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']
@@ -194,7 +194,7 @@ class AuthController extends Controller
             if ($user->getAttribute('profile_image') && str_contains($user->getAttribute('profile_image'), 'cloudinary')) {
                 $publicId = $this->extractCloudinaryPublicId($user->getAttribute('profile_image'));
                 if ($publicId) {
-                    \Cloudinary\Cloudinary::uploadApi()->destroy($publicId);
+                    cloudinary()->uploadApi()->destroy($publicId);
                 }
             }
 

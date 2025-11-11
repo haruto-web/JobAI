@@ -18,20 +18,14 @@ class GoogleController extends Controller
             return Socialite::driver('google')->stateless()->redirect();
         } catch (\Exception $e) {
             Log::error('Google redirect error: ' . $e->getMessage());
-            $frontendUrl = env('FRONTEND_URL');
-            if (!$frontendUrl || $frontendUrl === 'http://localhost:3000') {
-                $frontendUrl = env('APP_ENV') === 'production' ? 'https://job-ai-liart.vercel.app' : 'http://localhost:3000';
-            }
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
             return redirect("{$frontendUrl}/login?error=oauth_config_error");
         }
     }
 
     public function handleGoogleCallback()
     {
-        $frontendUrl = env('FRONTEND_URL');
-        if (!$frontendUrl || $frontendUrl === 'http://localhost:3000') {
-            $frontendUrl = env('APP_ENV') === 'production' ? 'https://job-ai-liart.vercel.app' : 'http://localhost:3000';
-        }
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
         
         try {
             if (!config('services.google.client_id') || !config('services.google.client_secret')) {

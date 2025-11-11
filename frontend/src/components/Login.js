@@ -36,6 +36,7 @@ function Login({ onLogin }) {
   };
 
   const handleGoogleLogin = () => {
+    // Full page redirect to Google OAuth
     window.location.href = `${API_URL}/auth/google`;
   };
 

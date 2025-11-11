@@ -101,7 +101,7 @@ class AuthController extends Controller
         ]);
 
         // Create empty profile
-        $user->profile()->create([]);
+        UserProfile::create(['user_id' => $user->id]);
 
         $token = $user->createToken('api-token')->plainTextToken;
 

@@ -36,6 +36,10 @@ Route::get('/cors-test', function () {
     return response()->json(['message' => 'CORS test successful', 'timestamp' => now()]);
 });
 
+Route::get('/urgent-jobs', [App\Http\Controllers\Api\JobController::class, 'urgentJobs']);
+Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+Route::post('/register', [App\Http\Controllers\Api\AuthController::class, 'register']);
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

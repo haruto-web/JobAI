@@ -34,6 +34,7 @@ return [
 
     'allowed_origins_patterns' => [
         '/^https:\/\/.*\.netlify\.app$/',
+        '/^https:\/\/.*\.vercel\.app$/',
     ],
 
     'allowed_headers' => ['*'],

@@ -29,27 +29,25 @@ class GoogleController extends Controller
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
         
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            if (!config('services.google.client_id') || !config('services.google.client_secret')) {
+                return redirect("{$frontendUrl}/login?error=oauth_not_configured");
+            }
             
-            // Find or create user
+            $googleUser = Socialite::driver('google')->stateless()->user();
             $user = User::where('email', $googleUser->getEmail())->first();
             
             if ($user) {
-                // Existing user - log them in
                 $token = $user->createToken('google-login')->plainTextToken;
                 return redirect("{$frontendUrl}/oauth/complete?token={$token}");
-            } else {
-                // New user - send to registration completion
-                return redirect("{$frontendUrl}/oauth/complete?email=" . urlencode($googleUser->getEmail()) . 
-                    "&name=" . urlencode($googleUser->getName()) . 
-                    "&avatar=" . urlencode($googleUser->getAvatar() ?? '') . 
-                    "&provider=google");
             }
+            
+            return redirect("{$frontendUrl}/oauth/complete?email=" . urlencode($googleUser->getEmail()) . 
+                "&name=" . urlencode($googleUser->getName()) . 
+                "&avatar=" . urlencode($googleUser->getAvatar() ?? '') . 
+                "&provider=google");
+                
         } catch (\Exception $e) {
-            \Log::error('Google OAuth callback failed', [
-                'error' => $e->getMessage(),
-                'trace' => substr($e->getTraceAsString(), 0, 500)
-            ]);
+            \Log::error('OAuth error: ' . $e->getMessage());
             return redirect("{$frontendUrl}/login?error=oauth_failed");
         }
     }

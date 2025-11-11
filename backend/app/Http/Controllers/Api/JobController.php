@@ -198,10 +198,16 @@ class JobController extends Controller
 
     public function urgentJobs()
     {
-        $urgentJobs = Job::where('status', 'approved')
-            ->where('urgent', true)
-            ->get();
-        return response()->json($urgentJobs);
+        try {
+            $urgentJobs = Job::where('status', 'approved')
+                ->where('urgent', true)
+                ->get();
+            return response()->json($urgentJobs);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch urgent jobs', ['error' => $e->getMessage()]);
+            // Return empty array if urgent column doesn't exist
+            return response()->json([]);
+        }
     }
 
     public function employerJobs(Request $request)

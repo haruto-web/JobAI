@@ -182,6 +182,10 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
+            if (!config('cloudinary.cloud_name') && !env('CLOUDINARY_URL')) {
+                throw new \Exception('Cloudinary is not configured');
+            }
+
             Log::info('Starting profile image upload', ['file' => $request->file('profile_image')->getClientOriginalName()]);
             
             if ($user->profile_image && str_contains($user->profile_image, 'cloudinary')) {
@@ -195,11 +199,9 @@ class AuthController extends Controller
                 'folder' => 'profile_images'
             ]);
 
-            Log::info('Cloudinary result', ['result' => $result]);
-
-            if (!$result || !isset($result['secure_url'])) {
-                Log::error('Cloudinary result is null or missing secure_url', ['result' => $result]);
-                throw new \Exception('Cloudinary upload failed - no URL returned');
+            if (!$result || !is_array($result) || !isset($result['secure_url'])) {
+                Log::error('Invalid Cloudinary result', ['result' => $result]);
+                throw new \Exception('Cloudinary upload failed');
             }
 
             $user->profile_image = $result['secure_url'];

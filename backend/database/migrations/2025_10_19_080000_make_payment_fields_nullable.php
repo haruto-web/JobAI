@@ -10,14 +10,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Use raw statements to avoid requiring doctrine/dbal for change()
-        // Skip raw MySQL ALTER TABLE MODIFY statements on SQLite (in tests)
         if (DB::getDriverName() === 'sqlite') {
             return;
         }
 
-        DB::statement("ALTER TABLE `payments` MODIFY `application_id` BIGINT UNSIGNED NULL");
-        DB::statement("ALTER TABLE `payments` MODIFY `jobseeker_id` BIGINT UNSIGNED NULL");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE payments ALTER COLUMN application_id DROP NOT NULL");
+            DB::statement("ALTER TABLE payments ALTER COLUMN jobseeker_id DROP NOT NULL");
+        } else {
+            DB::statement("ALTER TABLE `payments` MODIFY `application_id` BIGINT UNSIGNED NULL");
+            DB::statement("ALTER TABLE `payments` MODIFY `jobseeker_id` BIGINT UNSIGNED NULL");
+        }
     }
 
     /**
@@ -29,7 +32,12 @@ return new class extends Migration
             return;
         }
 
-        DB::statement("ALTER TABLE `payments` MODIFY `application_id` BIGINT UNSIGNED NOT NULL");
-        DB::statement("ALTER TABLE `payments` MODIFY `jobseeker_id` BIGINT UNSIGNED NOT NULL");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE payments ALTER COLUMN application_id SET NOT NULL");
+            DB::statement("ALTER TABLE payments ALTER COLUMN jobseeker_id SET NOT NULL");
+        } else {
+            DB::statement("ALTER TABLE `payments` MODIFY `application_id` BIGINT UNSIGNED NOT NULL");
+            DB::statement("ALTER TABLE `payments` MODIFY `jobseeker_id` BIGINT UNSIGNED NOT NULL");
+        }
     }
 };

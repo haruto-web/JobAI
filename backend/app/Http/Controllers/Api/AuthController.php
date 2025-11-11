@@ -180,17 +180,45 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // Delete old image if exists
-        if ($user->getAttribute('profile_image')) {
-            Storage::disk('public')->delete($user->getAttribute('profile_image'));
+        try {
+            // Upload to Cloudinary
+            $uploadedFile = $request->file('profile_image');
+            $result = cloudinary()->upload($uploadedFile->getRealPath(), [
+                'folder' => 'avatars',
+                'transformation' => [
+                    'width' => 400,
+                    'height' => 400,
+                    'crop' => 'fill',
+                    'gravity' => 'face'
+                ]
+            ]);
+
+            // Delete old image from Cloudinary if exists
+            if ($user->getAttribute('profile_image') && str_contains($user->getAttribute('profile_image'), 'cloudinary')) {
+                $publicId = $this->extractCloudinaryPublicId($user->getAttribute('profile_image'));
+                if ($publicId) {
+                    cloudinary()->destroy($publicId);
+                }
+            }
+
+            $user->setAttribute('profile_image', $result->getSecurePath());
+            $user->save();
+
+            return response()->json($user);
+        } catch (\Exception $e) {
+            Log::error('Profile image upload failed', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to upload image'], 500);
         }
+    }
 
-        $path = $request->file('profile_image')->store('avatars', 'public');
-
-        $user->setAttribute('profile_image', $path);
-        $user->save();
-
-        return response()->json($user);
+    private function extractCloudinaryPublicId($url)
+    {
+        // Extract public_id from Cloudinary URL
+        // Example: https://res.cloudinary.com/cloud/image/upload/v123/avatars/abc.jpg -> avatars/abc
+        if (preg_match('/\/upload\/(?:v\d+\/)?(.+)\.[^.]+$/', $url, $matches)) {
+            return $matches[1];
+        }
+        return null;
     }
 
     public function user(Request $request)

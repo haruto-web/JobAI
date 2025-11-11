@@ -180,41 +180,19 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        try {
-            // Upload to Cloudinary
-            $uploadedFile = $request->file('profile_image');
-            
-            // Use Cloudinary Upload API directly
-            \Cloudinary::config([
-                'cloud_name' => config('cloudinary.cloud_name'),
-                'api_key' => config('cloudinary.api_key'),
-                'api_secret' => config('cloudinary.api_secret'),
-                'secure' => true
-            ]);
-            
-            $result = \Cloudinary\Uploader::upload($uploadedFile->getRealPath(), [
-                'folder' => 'avatars',
-                'transformation' => [
-                    ['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']
-                ]
-            ]);
-
-            // Delete old image from Cloudinary if exists
-            if ($user->getAttribute('profile_image') && str_contains($user->getAttribute('profile_image'), 'cloudinary')) {
-                $publicId = $this->extractCloudinaryPublicId($user->getAttribute('profile_image'));
-                if ($publicId) {
-                    \Cloudinary\Uploader::destroy($publicId);
-                }
-            }
-
-            $user->setAttribute('profile_image', $result['secure_url']);
-            $user->save();
-
-            return response()->json($user);
-        } catch (\Exception $e) {
-            Log::error('Profile image upload failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['message' => 'Failed to upload image: ' . $e->getMessage()], 500);
+        // For now, use local storage until Cloudinary is properly configured
+        // Delete old image if exists
+        if ($user->getAttribute('profile_image')) {
+            Storage::disk('public')->delete($user->getAttribute('profile_image'));
         }
+
+        $path = $request->file('profile_image')->store('avatars', 'public');
+        $url = config('app.url') . '/storage/' . $path;
+
+        $user->setAttribute('profile_image', $url);
+        $user->save();
+
+        return response()->json($user);
     }
 
     private function extractCloudinaryPublicId($url)

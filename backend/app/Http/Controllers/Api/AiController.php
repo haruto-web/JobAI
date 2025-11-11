@@ -421,6 +421,29 @@ class AiController extends Controller
         return response()->json(['messages' => $messages]);
     }
 
+    public function testOpenAI(Request $request)
+    {
+        try {
+            $openai = new OpenAIService();
+            $response = $openai->getClient()->chat()->create([
+                'model' => 'gpt-3.5-turbo',
+                'messages' => [['role' => 'user', 'content' => 'Say "OpenAI is working!"']],
+                'max_tokens' => 20,
+            ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'OpenAI is working correctly!',
+                'response' => $response->choices[0]->message->content
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'OpenAI is not working',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function deleteChatHistory(Request $request)
     {
         $user = Auth::user();
@@ -1143,29 +1166,63 @@ class AiController extends Controller
     {
         $text = strtolower($resumeText);
         
-        // Extract skills using keyword matching
-        $commonSkills = [
-            'javascript', 'python', 'java', 'php', 'react', 'angular', 'vue', 'node', 'nodejs',
-            'sql', 'mysql', 'postgresql', 'mongodb', 'html', 'css', 'typescript', 'c++', 'c#',
-            'ruby', 'go', 'rust', 'swift', 'kotlin', 'docker', 'kubernetes', 'aws', 'azure',
-            'git', 'agile', 'scrum', 'rest', 'api', 'microservices', 'devops', 'ci/cd',
-            'machine learning', 'data analysis', 'excel', 'powerpoint', 'word', 'communication',
-            'leadership', 'project management', 'teamwork', 'problem solving'
+        // Comprehensive skill categories
+        $skillCategories = [
+            'programming' => ['javascript', 'python', 'java', 'php', 'c++', 'c#', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'typescript'],
+            'web_frontend' => ['react', 'angular', 'vue', 'html', 'css', 'tailwind', 'bootstrap', 'jquery', 'redux', 'ui/ux', 'responsive design'],
+            'web_backend' => ['node', 'nodejs', 'laravel', 'django', 'flask', 'spring', 'express', 'rest api', 'restful', 'graphql', 'microservices'],
+            'database' => ['sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'database'],
+            'devops' => ['docker', 'kubernetes', 'aws', 'azure', 'git', 'jenkins', 'ci/cd', 'devops'],
+            'methodology' => ['agile', 'scrum', 'project management'],
+            'design' => ['photoshop', 'illustrator', 'figma', 'sketch', 'graphic design', 'web design'],
+            'data' => ['machine learning', 'data analysis', 'excel', 'powerpoint'],
+            'soft_skills' => ['communication', 'leadership', 'teamwork', 'problem solving']
         ];
         
         $foundSkills = [];
-        foreach ($commonSkills as $skill) {
-            if (str_contains($text, $skill)) {
-                $foundSkills[] = ucwords($skill);
+        $skillsByCategory = [];
+        
+        foreach ($skillCategories as $category => $skills) {
+            foreach ($skills as $skill) {
+                if (str_contains($text, $skill)) {
+                    $skillName = ucwords($skill);
+                    $foundSkills[] = $skillName;
+                    $skillsByCategory[$category][] = $skillName;
+                }
             }
         }
         
-        // Estimate experience years
+        // Extract skills from Skills section
+        if (preg_match('/skills?[:\s]+([^\n]{10,300})/i', $resumeText, $matches)) {
+            $skillsLine = $matches[1];
+            $extractedSkills = preg_split('/[,;|]/', $skillsLine);
+            foreach ($extractedSkills as $skill) {
+                $skill = trim($skill);
+                if (strlen($skill) > 2 && strlen($skill) < 30 && !in_array(ucwords(strtolower($skill)), $foundSkills)) {
+                    $foundSkills[] = ucwords(strtolower($skill));
+                }
+            }
+        }
+        
+        // Enhanced experience extraction
         $experienceYears = 'Unknown';
-        if (preg_match('/(\d+)\+?\s*years?/i', $resumeText, $matches)) {
+        $totalYears = 0;
+        
+        // Look for explicit year mentions
+        if (preg_match('/(\d+)\+?\s*years?\s+(?:of\s+)?experience/i', $resumeText, $matches)) {
             $experienceYears = $matches[1] . ' years';
-        } elseif (preg_match('/experience.*?(\d+)/i', $resumeText, $matches)) {
-            $experienceYears = $matches[1] . ' years';
+            $totalYears = (int)$matches[1];
+        } 
+        // Calculate from date ranges (e.g., 2020-2023)
+        elseif (preg_match_all('/(\d{4})\s*[-–—]\s*(\d{4}|present)/i', $resumeText, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $startYear = (int)$match[1];
+                $endYear = strtolower($match[2]) === 'present' ? date('Y') : (int)$match[2];
+                $totalYears += ($endYear - $startYear);
+            }
+            if ($totalYears > 0) {
+                $experienceYears = $totalYears . ' years';
+            }
         }
         
         // Detect education
@@ -1180,13 +1237,21 @@ class AiController extends Controller
             $education[] = 'PhD';
         }
         
-        // Determine experience level
+        // Determine experience level with more intelligence
         $experienceLevel = 'entry';
-        if (preg_match('/(\d+)/', $experienceYears, $matches)) {
-            $years = (int)$matches[1];
-            if ($years >= 7) $experienceLevel = 'senior';
-            elseif ($years >= 3) $experienceLevel = 'mid';
+        if ($totalYears > 0) {
+            if ($totalYears >= 7) $experienceLevel = 'senior';
+            elseif ($totalYears >= 3) $experienceLevel = 'mid';
+        } elseif (preg_match('/(senior|lead|principal|architect)/i', $resumeText)) {
+            $experienceLevel = 'senior';
+        } elseif (preg_match('/(junior|intern|entry)/i', $resumeText)) {
+            $experienceLevel = 'entry';
+        } elseif (!empty($foundSkills) && count($foundSkills) > 10) {
+            $experienceLevel = 'mid'; // Many skills suggest mid-level
         }
+        
+        // Generate intelligent summary
+        $summary = $this->generateResumeSummary($resumeText, $foundSkills, $experienceYears, $education, $skillsByCategory);
         
         return [
             'skills' => array_unique($foundSkills),
@@ -1194,11 +1259,99 @@ class AiController extends Controller
             'education' => $education,
             'certifications' => [],
             'languages' => [],
-            'summary' => 'Resume analyzed using basic text extraction',
-            'strengths' => !empty($foundSkills) ? array_slice($foundSkills, 0, 3) : [],
+            'summary' => $summary,
+            'strengths' => $this->identifyStrengths($skillsByCategory, $foundSkills),
             'experience_level' => $experienceLevel,
             'key_achievements' => []
         ];
+    }
+
+    private function identifyStrengths($skillsByCategory, $allSkills)
+    {
+        $strengths = [];
+        
+        // Identify primary skill area
+        $maxCount = 0;
+        $primaryCategory = '';
+        foreach ($skillsByCategory as $category => $skills) {
+            if (count($skills) > $maxCount) {
+                $maxCount = count($skills);
+                $primaryCategory = $category;
+            }
+        }
+        
+        // Build strengths based on categories
+        if (!empty($skillsByCategory['programming'])) {
+            $strengths[] = 'Programming: ' . implode(', ', array_slice($skillsByCategory['programming'], 0, 3));
+        }
+        if (!empty($skillsByCategory['web_frontend']) || !empty($skillsByCategory['web_backend'])) {
+            $webSkills = array_merge($skillsByCategory['web_frontend'] ?? [], $skillsByCategory['web_backend'] ?? []);
+            $strengths[] = 'Web Development: ' . implode(', ', array_slice($webSkills, 0, 3));
+        }
+        if (!empty($skillsByCategory['database'])) {
+            $strengths[] = 'Database: ' . implode(', ', array_slice($skillsByCategory['database'], 0, 2));
+        }
+        
+        return !empty($strengths) ? $strengths : array_slice($allSkills, 0, 3);
+    }
+
+    private function generateResumeSummary($resumeText, $skills, $experienceYears, $education, $skillsByCategory = [])
+    {
+        $lines = explode("\n", $resumeText);
+        $name = '';
+        $title = '';
+        
+        // Try to extract name (usually first line)
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (strlen($line) > 3 && strlen($line) < 50 && !str_contains(strtolower($line), 'resume')) {
+                if (preg_match('/^[A-Z][a-z]+\s+[A-Z][a-z]+/', $line)) {
+                    $name = $line;
+                    break;
+                }
+            }
+        }
+        
+        // Try to extract job title or objective
+        $text = strtolower($resumeText);
+        if (preg_match('/(?:objective|summary|profile)[:\s]+([^\n]{20,150})/i', $resumeText, $matches)) {
+            $title = trim($matches[1]);
+        } elseif (preg_match('/(?:developer|engineer|designer|manager|analyst|specialist|consultant|coordinator|assistant|teacher|professor)[^\n]{0,50}/i', $resumeText, $matches)) {
+            $title = trim($matches[0]);
+        }
+        
+        // Build summary
+        $summary = '';
+        
+        if ($name) {
+            $summary .= $name;
+            if ($title) {
+                $summary .= ' - ' . $title;
+            }
+        } elseif ($title) {
+            $summary .= 'Professional: ' . $title;
+        } else {
+            $summary .= 'Professional';
+        }
+        
+        if (!empty($skills)) {
+            $skillCount = count($skills);
+            $topSkills = array_slice($skills, 0, 5);
+            $summary .= '. Skilled in ' . implode(', ', $topSkills);
+            if ($skillCount > 5) {
+                $summary .= ' and ' . ($skillCount - 5) . ' more';
+            }
+        }
+        
+        if ($experienceYears !== 'Unknown') {
+            $summary .= '. ' . $experienceYears . ' of experience';
+        }
+        
+        if (!empty($education)) {
+            $summary .= '. Education: ' . implode(', ', $education);
+        }
+        
+        return $summary . '.';
     }
 
     public function jobAction(Request $request)

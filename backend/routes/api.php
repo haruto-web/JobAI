@@ -12,6 +12,7 @@ Route::get('/health', function () {
 });
 
 // ---------------- Public Routes ----------------
+Route::get('test-openai', [AiController::class, 'testOpenAI']);
 Route::post('login', [AuthController::class, 'login']);
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verify-email', [AuthController::class, 'verifyEmail']);
@@ -71,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ai/chat-history', [AiController::class, 'getChatHistory']);
     Route::delete('ai/chat-history', [AiController::class, 'deleteChatHistory']);
     Route::post('ai/job-action', [AiController::class, 'jobAction']);
+    Route::get('ai/test-openai', [AiController::class, 'testOpenAI']);
 
     // Payments
     Route::get('payments', [PaymentController::class, 'index']);

@@ -34,6 +34,11 @@ class GoogleController extends Controller
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
         
         try {
+            // Verify required config
+            if (!config('services.google.client_id') || !config('services.google.client_secret')) {
+                throw new \Exception('Google OAuth not configured');
+            }
+
             $callbackUrl = url('/auth/google/callback');
             $googleUser = Socialite::driver('google')->stateless()->redirectUrl($callbackUrl)->user();
 
@@ -52,10 +57,14 @@ class GoogleController extends Controller
             \Log::error('Google OAuth failed', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
+                'config_check' => [
+                    'has_client_id' => !empty(config('services.google.client_id')),
+                    'has_client_secret' => !empty(config('services.google.client_secret')),
+                    'redirect_uri' => config('services.google.redirect')
+                ]
             ]);
-            $error = urlencode('Authentication failed. Please try again.');
-            return redirect("{$frontendUrl}/login?error={$error}");
+            return redirect("{$frontendUrl}/login?error=google_auth_failed&message=" . urlencode('Please use email/password login instead'));
         }
     }
 }

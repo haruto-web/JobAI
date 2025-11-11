@@ -7,33 +7,32 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Hash; 
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class GoogleController extends Controller
 {
-    // Redirect to Google
     public function redirectToGoogle()
     {
-        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
-        $driver = Socialite::driver('google');
-
-        // Force the redirect URL to the backend callback route so Google returns
-        // to the server (not the frontend) regardless of environment config.
-        // Use Laravel's url() helper which respects APP_URL.
-        $callbackUrl = url('/auth/google/callback');
-
-        // stateless() is available on the two-provider implementation. Annotating the
-        // $driver variable above helps static analyzers (intelephense) understand
-        // the available methods and prevents false-positive "undefined method" warnings.
-        return $driver->stateless()->redirectUrl($callbackUrl)->redirect();
+        try {
+            return Socialite::driver('google')->stateless()->redirect();
+        } catch (\Exception $e) {
+            Log::error('Google redirect error: ' . $e->getMessage());
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect("{$frontendUrl}/login?error=oauth_config_error");
+        }
     }
 
-    // Handle callback
     public function handleGoogleCallback()
     {
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
         
         try {
+            if (!config('services.google.client_id') || !config('services.google.client_secret')) {
+                Log::error('Google OAuth not configured');
+                return redirect("{$frontendUrl}/login?error=oauth_not_configured");
+            }
+            
             $googleUser = Socialite::driver('google')->stateless()->user();
             $user = User::where('email', $googleUser->getEmail())->first();
 
@@ -48,7 +47,11 @@ class GoogleController extends Controller
                 "&provider=google");
                 
         } catch (\Exception $e) {
-            \Log::error('Google OAuth error: ' . $e->getMessage());
+            Log::error('Google OAuth callback error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             return redirect("{$frontendUrl}/login?error=oauth_failed");
         }
     }

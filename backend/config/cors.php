@@ -20,15 +20,16 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-        'http://localhost:5173', // React dev server
+        'http://localhost:5173',
         'http://127.0.0.1:5173',
-        'http://localhost:3000', // Create React App dev server
+        'http://localhost:3000',
         'http://127.0.0.1:3000',
-        'http://localhost:3001', // Additional port for Create React App
+        'http://localhost:3001',
         'http://127.0.0.1:3001',
-        'http://localhost:3003', // Current React dev server port
+        'http://localhost:3003',
         'http://127.0.0.1:3003',
-        'https://job-ai-liart.vercel.app', // Production frontend
+        'https://job-ai-liart.vercel.app',
+        'https://job-ai-blond.vercel.app',
     ],
 
     'allowed_origins_patterns' => [

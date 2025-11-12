@@ -76,14 +76,19 @@ class JobController extends Controller
             'description' => 'required|string',
             'summary' => 'nullable|string',
             'qualifications' => 'nullable|string',
-            'company' => 'required|string|max:255',
+            'company' => 'nullable|string|max:255',
             'location' => 'required|string|max:255',
             'type' => 'string|in:full-time,part-time,contract',
-            'salary' => 'numeric|min:0',
-            'requirements' => 'array',
-            'urgent' => 'boolean',
-            'status' => 'string|in:draft,pending_approval,approved,rejected,archived',
+            'salary' => 'nullable|numeric|min:0',
+            'requirements' => 'nullable|array',
+            'urgent' => 'nullable|boolean',
+            'status' => 'nullable|string|in:draft,pending_approval,approved,rejected,archived',
         ]);
+
+        // Set default company name if not provided
+        if (empty($validated['company'])) {
+            $validated['company'] = $user->name;
+        }
 
         $user = Auth::user();
 

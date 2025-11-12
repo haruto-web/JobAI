@@ -5,7 +5,11 @@ nixPkgs = ["php82", "php82Packages.composer"]
 cmds = ["cd backend && composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
-cmds = ["cd backend && php artisan config:cache", "cd backend && php artisan route:cache"]
+cmds = [
+  "cd backend && php artisan config:cache",
+  "cd backend && php artisan route:cache",
+  "cd backend && php artisan migrate --force"
+]
 
 [start]
 cmd = "cd backend && php artisan serve --host=0.0.0.0 --port=$PORT"

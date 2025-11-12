@@ -1,6 +1,6 @@
 .profile-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0f172a;
   padding: 40px 20px;
 }
 
@@ -13,50 +13,32 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  background: #1e293b;
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 10px 20px;
+  border: 1px solid #334155;
+  padding: 12px 24px;
   border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 24px;
+  font-weight: 600;
+  margin-bottom: 32px;
   transition: all 0.3s ease;
 }
 
 .back-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #334155;
   transform: translateX(-4px);
 }
 
 .profile-header-card {
-  background: white;
-  border-radius: 24px;
-  padding: 48px;
-  margin-bottom: 32px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 40px;
+  margin-bottom: 24px;
+  border: 1px solid #334155;
   display: flex;
   align-items: center;
-  gap: 40px;
-  position: relative;
-  overflow: hidden;
-}
-
-.profile-header-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-}
-
-.employer-header::before {
-  background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+  gap: 32px;
 }
 
 .profile-avatar-section {
@@ -65,51 +47,45 @@
 }
 
 .profile-avatar {
-  width: 160px;
-  height: 160px;
-  border-radius: 24px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
   object-fit: cover;
-  border: 5px solid #667eea;
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+  border: 4px solid #334155;
 }
 
 .profile-avatar-default {
-  width: 160px;
-  height: 160px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #334155;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
 }
 
 .employer-avatar {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  border-color: #f5576c;
-  box-shadow: 0 12px 32px rgba(245, 87, 108, 0.4);
+  background: #f5576c;
 }
 
 .profile-badge {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: #48bb78;
+  bottom: 0;
+  right: 0;
+  background: #22c55e;
   color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 4px;
-  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
 }
 
 .employer-badge {
   background: #f5576c;
-  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
 }
 
 .profile-info {
@@ -117,12 +93,10 @@
 }
 
 .profile-name {
-  font-size: 36px;
-  font-weight: 800;
-  color: #1a202c;
-  margin: 0 0 16px 0;
-  text-transform: uppercase;
-  letter-spacing: -0.5px;
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 12px 0;
 }
 
 .profile-email,
@@ -131,44 +105,36 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #4a5568;
-  margin: 8px 0;
+  color: #94a3b8;
+  margin: 6px 0;
 }
 
 .profile-card {
-  background: white;
+  background: #1e293b;
   border-radius: 16px;
   padding: 32px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.profile-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid #334155;
 }
 
 .card-title {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  color: #1a202c;
-  margin: 0 0 20px 0;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e2e8f0;
+  color: white;
+  margin: 0 0 24px 0;
 }
 
 .card-title svg {
-  color: #667eea;
+  color: #22d3ee;
 }
 
 .bio-text {
-  font-size: 16px;
-  line-height: 1.8;
-  color: #4a5568;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #cbd5e1;
   margin: 0;
   white-space: pre-wrap;
 }
@@ -189,29 +155,24 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-  transition: transform 0.2s ease;
-}
-
-.skill-tag:hover {
-  transform: translateY(-2px);
+  background: #334155;
+  color: #22d3ee;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #475569;
 }
 
 .experience-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: #334155;
   color: white;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 16px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 15px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+  border: 1px solid #475569;
   text-transform: capitalize;
 }
 
@@ -219,39 +180,41 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.jobs-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.jobs-grid::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 4px;
+}
+
+.jobs-grid::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.jobs-grid::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 .job-card {
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 24px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.job-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
 .job-card:hover {
-  border-color: #667eea;
-  transform: translateY(-6px);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.25);
-}
-
-.job-card:hover::before {
-  opacity: 1;
+  border-color: #22d3ee;
+  transform: translateY(-2px);
 }
 
 .job-card-header {
@@ -263,24 +226,22 @@
 }
 
 .job-card-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  color: #1a202c;
+  color: white;
   margin: 0;
   flex: 1;
 }
 
 .job-type-badge {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #6366f1;
   color: white;
-  padding: 6px 14px;
-  border-radius: 20px;
+  padding: 4px 12px;
+  border-radius: 12px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   white-space: nowrap;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .job-card-company,
@@ -288,14 +249,14 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
-  color: #718096;
+  font-size: 13px;
+  color: #94a3b8;
   margin: 8px 0;
 }
 
 .job-card-description {
   font-size: 14px;
-  color: #4a5568;
+  color: #cbd5e1;
   line-height: 1.6;
   margin: 12px 0 0 0;
 }
@@ -303,7 +264,7 @@
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #a0aec0;
+  color: #64748b;
 }
 
 .empty-state svg {
@@ -341,12 +302,12 @@
   
   .profile-avatar,
   .profile-avatar-default {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
   }
   
   .profile-name {
-    font-size: 28px;
+    font-size: 24px;
   }
   
   .profile-card {

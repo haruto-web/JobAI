@@ -41,6 +41,8 @@ $payload = json_encode([
     'description' => 'CLI test add money'
 ]);
 
+// amazon-q-disable-next-line CWE-352
+// CSRF not applicable: CLI test script using API Bearer token authentication, not browser-based form
 $request = Request::create('/api/manage-money', 'POST', [], [], [], [
     'HTTP_ACCEPT' => 'application/json',
     'HTTP_AUTHORIZATION' => 'Bearer ' . $token,

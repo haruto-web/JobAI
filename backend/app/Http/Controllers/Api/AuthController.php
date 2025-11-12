@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\DB;
 use App\Services\OpenAIService;
 use App\Services\ResumeParserService;
+use Cloudinary\Api\Upload\UploadApi;
 
 class AuthController extends Controller
 {
@@ -182,26 +183,26 @@ class AuthController extends Controller
         $user = $request->user();
 
         try {
-            if (!config('cloudinary.cloud_name') && !env('CLOUDINARY_URL')) {
-                throw new \Exception('Cloudinary is not configured');
+            $file = $request->file('profile_image');
+            if (!$file || !$file->isValid()) {
+                throw new \Exception('Invalid file upload');
             }
 
-            Log::info('Starting profile image upload', ['file' => $request->file('profile_image')->getClientOriginalName()]);
-            
-            if ($user->profile_image && str_contains($user->profile_image, 'cloudinary')) {
-                $publicId = $this->extractCloudinaryPublicId($user->profile_image);
-                if ($publicId) {
-                    cloudinary()->uploadApi()->destroy($publicId);
-                }
-            }
+            \Cloudinary\Configuration\Configuration::instance([
+                'cloud' => [
+                    'cloud_name' => config('cloudinary.cloud_name'),
+                    'api_key' => config('cloudinary.api_key'),
+                    'api_secret' => config('cloudinary.api_secret')
+                ],
+                'url' => ['secure' => true]
+            ]);
 
-            $result = cloudinary()->uploadApi()->upload($request->file('profile_image')->getRealPath(), [
+            $result = (new \Cloudinary\Api\Upload\UploadApi())->upload($file->getRealPath(), [
                 'folder' => 'profile_images'
             ]);
 
-            if (!$result || !is_array($result) || !isset($result['secure_url'])) {
-                Log::error('Invalid Cloudinary result', ['result' => $result]);
-                throw new \Exception('Cloudinary upload failed');
+            if (!$result || !isset($result['secure_url'])) {
+                throw new \Exception('Cloudinary upload returned invalid response');
             }
 
             $user->profile_image = $result['secure_url'];
@@ -214,10 +215,12 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * @param string $url
+     * @return string|null
+     */
     private function extractCloudinaryPublicId($url)
     {
-        // Extract public_id from Cloudinary URL
-        // Example: https://res.cloudinary.com/cloud/image/upload/v123/avatars/abc.jpg -> avatars/abc
         if (preg_match('/\/upload\/(?:v\d+\/)?(.+)\.[^.]+$/', $url, $matches)) {
             return $matches[1];
         }

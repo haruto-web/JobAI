@@ -152,16 +152,18 @@
 }
 
 .skill-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #334155;
-  color: #22d3ee;
-  padding: 6px 14px;
-  border-radius: 8px;
+  display: inline-block;
+  background: #22d3ee;
+  color: #0f172a;
+  padding: 8px 16px;
+  border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  border: 1px solid #475569;
+  transition: transform 0.2s ease;
+}
+
+.skill-tag:hover {
+  transform: translateY(-2px);
 }
 
 .experience-badge {

@@ -56,7 +56,6 @@ function Register({ onRegister }) {
       const params = new URLSearchParams(window.location.search);
       const email = params.get('email');
       const name = params.get('name');
-      const avatar = params.get('avatar');
       const provider = params.get('provider');
 
       // If coming from OAuth, generate a random password

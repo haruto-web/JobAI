@@ -7,9 +7,8 @@ cmds = ["cd backend && composer install --no-dev --optimize-autoloader"]
 [phases.build]
 cmds = [
   "cd backend && php artisan config:clear",
-  "cd backend && php artisan cache:clear",
-  "cd backend && php artisan migrate --force"
+  "cd backend && php artisan cache:clear"
 ]
 
 [start]
-cmd = "cd backend && php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "cd backend && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"

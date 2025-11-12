@@ -15,7 +15,6 @@ function Register({ onRegister }) {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState('');
   const [oauthProvider, setOauthProvider] = useState('');
 
   const handleChange = (e) => {
@@ -72,10 +71,6 @@ function Register({ onRegister }) {
           password_confirmation: randomPassword
         } : {})
       }));
-
-      if (avatar) {
-        setAvatarPreview(avatar);
-      }
 
       if (provider) {
         setOauthProvider(provider);

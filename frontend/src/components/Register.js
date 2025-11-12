@@ -96,15 +96,29 @@ function Register({ onRegister }) {
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="error-message">{error}</div>}
 
-          {avatarPreview && (
-            <div className="form-group avatar-preview">
-              <img src={avatarPreview} alt="avatar preview" style={{ width: 80, height: 80, borderRadius: '50%' }} />
-            </div>
-          )}
-
           {oauthProvider && (
-            <div className="oauth-note">
-              Signing up with <strong>{oauthProvider}</strong>. You can complete your account details below.
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '10px' }}>
+                <div style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: '50%',
+                  background: '#4285F4',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  flexShrink: 0
+                }}>
+                  {formData.name ? formData.name.charAt(0).toUpperCase() : 'G'}
+                </div>
+                <span style={{ fontSize: '16px', color: '#fff' }}>{formData.email}</span>
+              </div>
+              <div className="oauth-note">
+                Signing up with <strong>{oauthProvider}</strong>. You can complete your account details below.
+              </div>
             </div>
           )}
 

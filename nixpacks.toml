@@ -1,15 +1,16 @@
 [phases.setup]
 nixPkgs = ["php82", "php82Packages.composer"]
+aptsPackages = ["default-mysql-client"]
 
 [phases.install]
-cmds = ["cd backend && composer install --no-dev --optimize-autoloader"]
+cmds = ["composer install --no-dev --optimize-autoloader --working-dir=backend"]
 
 [phases.build]
 cmds = [
-  "cd backend && php artisan config:cache",
-  "cd backend && php artisan route:cache",
-  "cd backend && php artisan migrate --force"
+  "php backend/artisan config:cache",
+  "php backend/artisan route:cache",
+  "php backend/artisan migrate --force"
 ]
 
 [start]
-cmd = "cd backend && php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "php backend/artisan serve --host=0.0.0.0 --port=$PORT"

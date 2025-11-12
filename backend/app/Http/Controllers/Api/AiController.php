@@ -118,7 +118,8 @@ class AiController extends Controller
 
                 $scored = [];
                 foreach ($jobs as $job) {
-                    $text = strtolower($job->title . ' ' . ($job->description ?? '') . ' ' . ($job->requirements ? json_encode($job->requirements) : ''));
+                    $requirements = is_string($job->requirements) ? $job->requirements : json_encode($job->requirements ?? []);
+                    $text = strtolower($job->title . ' ' . ($job->description ?? '') . ' ' . $requirements);
                     $matchCount = 0;
                     foreach ($skillsLower as $skill) {
                         if ($skill === '') continue;

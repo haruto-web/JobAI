@@ -86,6 +86,7 @@ function Login({ onLogin }) {
             <label htmlFor="email">Email Address</label>
             <input
               id="email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -100,6 +101,7 @@ function Login({ onLogin }) {
             <label htmlFor="password">Password</label>
             <input
               id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -176,6 +178,7 @@ function Login({ onLogin }) {
                 <label htmlFor="reset-email">Email Address</label>
                 <input
                   id="reset-email"
+                  name="reset-email"
                   type="email"
                   value={forgotPasswordEmail}
                   onChange={(e) => setForgotPasswordEmail(e.target.value)}

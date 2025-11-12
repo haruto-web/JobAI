@@ -30,6 +30,7 @@ return [
         'http://127.0.0.1:3003',
         'https://job-ai-liart.vercel.app',
         'https://job-ai-blond.vercel.app',
+        'https://job-ai-andrews-projects-124b231c.vercel.app',
         'https://jobai-production-ca98.up.railway.app',
     ],
 

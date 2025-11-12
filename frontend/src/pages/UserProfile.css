@@ -33,12 +33,13 @@
 .profile-header-card {
   background: #1e293b;
   border-radius: 16px;
-  padding: 40px;
+  padding: 32px;
   margin-bottom: 24px;
   border: 1px solid #334155;
   display: flex;
   align-items: center;
-  gap: 32px;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .profile-avatar-section {
@@ -112,9 +113,16 @@
 .profile-card {
   background: #1e293b;
   border-radius: 16px;
-  padding: 32px;
+  padding: 28px;
   margin-bottom: 20px;
   border: 1px solid #334155;
+}
+
+.profile-section {
+  background: #0f172a;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 16px;
 }
 
 .card-title {
@@ -124,7 +132,32 @@
   font-size: 18px;
   font-weight: 700;
   color: white;
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
+}
+
+.profile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #334155;
+}
+
+.profile-detail-row:last-child {
+  border-bottom: none;
+}
+
+.profile-detail-label {
+  font-size: 14px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.profile-detail-value {
+  font-size: 14px;
+  color: white;
+  font-weight: 600;
+  text-align: right;
 }
 
 .card-title svg {
@@ -152,29 +185,24 @@
 }
 
 .skill-tag {
-  display: inline-block;
-  background: #22d3ee;
-  color: #0f172a;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  transition: transform 0.2s ease;
+  display: inline;
+  color: #22d3ee;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.skill-tag:hover {
-  transform: translateY(-2px);
+.skill-tag::after {
+  content: ', ';
+}
+
+.skill-tag:last-child::after {
+  content: '';
 }
 
 .experience-badge {
-  display: inline-block;
-  background: #334155;
+  font-size: 14px;
   color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 15px;
   font-weight: 600;
-  border: 1px solid #475569;
   text-transform: capitalize;
 }
 

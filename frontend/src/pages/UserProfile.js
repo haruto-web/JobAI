@@ -93,52 +93,40 @@ function UserProfile() {
               </div>
             </div>
 
-            {user.profile?.bio && (
-              <div className="profile-card">
-                <h2 className="card-title">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  About
-                </h2>
-                <p className="bio-text">{user.profile.bio}</p>
+            <div className="profile-card">
+              <h2 className="card-title">Profile Details</h2>
+              <div className="profile-detail-row">
+                <span className="profile-detail-label">Joined:</span>
+                <span className="profile-detail-value">{new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
               </div>
-            )}
+              <div className="profile-detail-row">
+                <span className="profile-detail-label">User Type:</span>
+                <span className="profile-detail-value">Job Seeker</span>
+              </div>
+            </div>
 
-            <div className="profile-grid">
-              {user.profile?.skills && user.profile.skills.length > 0 && (
-                <div className="profile-card">
-                  <h2 className="card-title">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13 7H7v6h6V7z" />
-                      <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
-                    </svg>
-                    Skills
-                  </h2>
-                  <div className="skills-container">
+            <div className="profile-card">
+              <h2 className="card-title">Job Seeker Information</h2>
+              {user.profile?.bio && (
+                <p className="bio-text" style={{ marginBottom: '20px' }}>{user.profile.bio}</p>
+              )}
+              <div className="profile-section">
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'white', marginBottom: '16px' }}>Your Background</h3>
+                {user.profile?.skills && user.profile.skills.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: 'white' }}>Skills: </span>
                     {user.profile.skills.map((skill, index) => (
-                      <span key={index} className="skill-tag">
-                        {skill}
-                      </span>
+                      <span key={index} className="skill-tag">{skill}</span>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {user.profile?.experience_level && (
-                <div className="profile-card">
-                  <h2 className="card-title">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                      <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-                    </svg>
-                    Experience Level
-                  </h2>
-                  <div className="experience-badge">
-                    {user.profile.experience_level.charAt(0).toUpperCase() + user.profile.experience_level.slice(1)}
+                )}
+                {user.profile?.experience_level && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: 'white' }}>Experience Level: </span>
+                    <span className="experience-badge">{user.profile.experience_level}</span>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </>
         ) : (

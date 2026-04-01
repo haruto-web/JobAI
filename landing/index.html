@@ -5,352 +5,292 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JobAI - AI-Powered Job Recommendation</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Navbar */
+        nav {
+            position: fixed; top: 0; width: 100%; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 40px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+        }
+        .logo { font-size: 24px; font-weight: 700; color: #667eea; text-decoration: none; }
+        .logo span { color: #764ba2; }
+        .nav-links { display: flex; gap: 30px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #555; font-weight: 500; transition: color 0.3s; }
+        .nav-links a:hover { color: #667eea; }
+        .nav-btn {
+            padding: 10px 24px; border-radius: 8px; font-weight: 600;
+            text-decoration: none; transition: all 0.3s; font-size: 14px;
+        }
+        .btn-outline { border: 2px solid #667eea; color: #667eea; }
+        .btn-outline:hover { background: #667eea; color: #fff; }
+        .btn-solid { background: #667eea; color: #fff; border: 2px solid #667eea; }
+        .btn-solid:hover { background: #5568d3; border-color: #5568d3; transform: translateY(-1px); }
+
+        /* Hero */
+        .hero {
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 500px;
-            width: 100%;
-            padding: 40px;
-        }
-
-        h1 {
-            color: #667eea;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 120px 40px 80px;
             text-align: center;
-            margin-bottom: 10px;
-            font-size: 32px;
+        }
+        .hero-content { max-width: 720px; }
+        .hero h1 { font-size: 52px; color: #fff; margin-bottom: 20px; line-height: 1.2; }
+        .hero p { font-size: 20px; color: rgba(255,255,255,0.85); margin-bottom: 40px; line-height: 1.6; }
+        .hero-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .hero-btn {
+            padding: 16px 36px; border-radius: 12px; font-size: 17px; font-weight: 600;
+            text-decoration: none; transition: all 0.3s; cursor: pointer; border: none;
+        }
+        .hero-btn-primary { background: #fff; color: #667eea; }
+        .hero-btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .hero-btn-secondary { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.5); }
+        .hero-btn-secondary:hover { border-color: #fff; background: rgba(255,255,255,0.1); }
+        .hero-stats {
+            display: flex; gap: 50px; justify-content: center; margin-top: 60px;
+        }
+        .stat { text-align: center; }
+        .stat-number { font-size: 36px; font-weight: 700; color: #fff; }
+        .stat-label { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+        /* Sections */
+        section { padding: 100px 40px; }
+        .section-title { text-align: center; font-size: 36px; color: #333; margin-bottom: 16px; }
+        .section-subtitle { text-align: center; font-size: 18px; color: #777; margin-bottom: 60px; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+        /* Features */
+        .features { background: #f8f9ff; }
+        .features-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px; max-width: 1100px; margin: 0 auto;
+        }
+        .feature-card {
+            background: #fff; border-radius: 16px; padding: 36px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06); transition: all 0.3s;
+        }
+        .feature-card:hover { transform: translateY(-6px); box-shadow: 0 12px 40px rgba(102,126,234,0.15); }
+        .feature-icon { font-size: 40px; margin-bottom: 16px; }
+        .feature-card h3 { font-size: 20px; color: #333; margin-bottom: 10px; }
+        .feature-card p { font-size: 15px; color: #777; line-height: 1.6; }
+
+        /* How it works */
+        .how-it-works { background: #fff; }
+        .steps {
+            display: flex; gap: 40px; max-width: 1000px; margin: 0 auto;
+            justify-content: center; flex-wrap: wrap;
+        }
+        .step { text-align: center; flex: 1; min-width: 200px; max-width: 280px; position: relative; }
+        .step-number {
+            width: 60px; height: 60px; border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff; font-size: 24px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .step h3 { font-size: 18px; margin-bottom: 8px; color: #333; }
+        .step p { font-size: 14px; color: #777; line-height: 1.5; }
+
+        /* User types */
+        .user-types { background: #f8f9ff; }
+        .types-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px; max-width: 1000px; margin: 0 auto;
+        }
+        .type-card {
+            background: #fff; border-radius: 16px; padding: 40px; text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06); transition: all 0.3s;
+        }
+        .type-card:hover { transform: translateY(-6px); box-shadow: 0 12px 40px rgba(102,126,234,0.15); }
+        .type-icon { font-size: 50px; margin-bottom: 16px; }
+        .type-card h3 { font-size: 22px; margin-bottom: 10px; color: #333; }
+        .type-card p { font-size: 15px; color: #777; line-height: 1.6; margin-bottom: 20px; }
+        .type-card ul { list-style: none; text-align: left; padding: 0; }
+        .type-card li { padding: 6px 0; font-size: 14px; color: #555; }
+        .type-card li::before { content: "✓ "; color: #667eea; font-weight: 700; }
+
+        /* CTA */
+        .cta {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            text-align: center; padding: 80px 40px;
+        }
+        .cta h2 { font-size: 36px; color: #fff; margin-bottom: 16px; }
+        .cta p { font-size: 18px; color: rgba(255,255,255,0.85); margin-bottom: 36px; }
+        .cta-btn {
+            display: inline-block; padding: 16px 40px; background: #fff; color: #667eea;
+            border-radius: 12px; font-size: 17px; font-weight: 600;
+            text-decoration: none; transition: all 0.3s;
+        }
+        .cta-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+
+        /* Footer */
+        footer {
+            background: #1a1a2e; color: rgba(255,255,255,0.6);
+            text-align: center; padding: 30px 40px; font-size: 14px;
         }
 
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 40px;
-            font-size: 16px;
+        /* Mobile */
+        @media (max-width: 768px) {
+            nav { padding: 14px 20px; }
+            .nav-links { gap: 12px; }
+            .hero h1 { font-size: 32px; }
+            .hero p { font-size: 16px; }
+            .hero-stats { gap: 24px; }
+            .stat-number { font-size: 24px; }
+            section { padding: 60px 20px; }
+            .section-title { font-size: 28px; }
+            .steps { flex-direction: column; align-items: center; }
         }
 
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-
-        .tab {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: #f0f0f0;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .tab.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border 0.3s;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .success {
-            background: #efe;
-            color: #3c3;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .user-type-cards {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .user-type-card {
-            padding: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.3s;
-        }
-
-        .user-type-card:hover {
-            border-color: #667eea;
-            transform: translateY(-2px);
-        }
-
-        .user-type-card.selected {
-            border-color: #667eea;
-            background: #f0f4ff;
-        }
-
-        .user-type-card h3 {
-            color: #333;
-            margin-bottom: 5px;
-            font-size: 18px;
-        }
-
-        .user-type-card p {
-            color: #666;
-            font-size: 13px;
+        @media (max-width: 480px) {
+            .nav-links a:not(.nav-btn) { display: none; }
+            .hero-buttons { flex-direction: column; align-items: center; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🚀 JobAI</h1>
-        <p class="subtitle">AI-Powered Job Recommendation System</p>
 
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('login')">Login</button>
-            <button class="tab" onclick="showTab('register')">Register</button>
+    <nav>
+        <a href="#" class="logo">🚀 Job<span>AI</span></a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How It Works</a>
+            <a href="login.html" class="nav-btn btn-outline">Log In</a>
+            <a href="login.html#register" class="nav-btn btn-solid">Get Started</a>
         </div>
+    </nav>
 
-        <div id="message"></div>
-
-        <!-- Login Form -->
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="loginEmail" required placeholder="Enter your email">
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Find Your Dream Job with the Power of AI</h1>
+            <p>JobAI uses artificial intelligence to match you with the perfect job opportunities based on your skills, experience, and career goals.</p>
+            <div class="hero-buttons">
+                <a href="login.html#register" class="hero-btn hero-btn-primary">Get Started Free</a>
+                <a href="#features" class="hero-btn hero-btn-secondary">Learn More</a>
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="loginPassword" required placeholder="Enter your password">
-            </div>
-            <button type="submit" class="btn btn-primary">Login</button>
-        </form>
-
-        <!-- Register Form -->
-        <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
-            <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" id="registerName" required placeholder="Enter your full name">
-            </div>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="registerEmail" required placeholder="Enter your email">
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="registerPassword" required minlength="8" placeholder="Create a password (min 8 characters)">
-            </div>
-            <div class="form-group">
-                <label>Confirm Password</label>
-                <input type="password" id="registerPasswordConfirm" required placeholder="Confirm your password">
-            </div>
-            <div class="form-group">
-                <label>I am a:</label>
-                <div class="user-type-cards">
-                    <div class="user-type-card selected" onclick="selectUserType('jobseeker')">
-                        <h3>👤 Job Seeker</h3>
-                        <p>Find your dream job</p>
-                    </div>
-                    <div class="user-type-card" onclick="selectUserType('employer')">
-                        <h3>💼 Employer</h3>
-                        <p>Post jobs & hire</p>
-                    </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-number">1,000+</div>
+                    <div class="stat-label">Job Listings</div>
                 </div>
-                <input type="hidden" id="userType" value="jobseeker">
+                <div class="stat">
+                    <div class="stat-number">AI</div>
+                    <div class="stat-label">Powered Matching</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Career Advisor</div>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Create Account</button>
-        </form>
-    </div>
+        </div>
+    </section>
 
-    <script>
-        const API_URL = 'http://localhost:8000/api';
-        const APPS = {
-            jobseeker: 'http://localhost:3001',
-            employer: 'http://localhost:3002',
-            admin: 'http://localhost:3003'
-        };
+    <section class="features" id="features">
+        <h2 class="section-title">Why Choose JobAI?</h2>
+        <p class="section-subtitle">Our AI-powered platform makes job hunting smarter, faster, and more personalized than ever.</p>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>AI Resume Analysis</h3>
+                <p>Upload your resume and our AI extracts your skills, experience, and qualifications to find the best matches.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Smart Job Matching</h3>
+                <p>Get personalized job recommendations based on your unique profile, skills, and career preferences.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>AI Career Advisor</h3>
+                <p>Chat with our AI assistant for career advice, interview tips, resume feedback, and job search strategies.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Application Tracking</h3>
+                <p>Track all your job applications in one place with real-time status updates and notifications.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h3>Web-Enhanced Search</h3>
+                <p>Our AI combines job listings with real-time web search to give you the most up-to-date career information.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <h3>Salary Insights</h3>
+                <p>Get salary information and compensation data to help you negotiate the best offer for your role.</p>
+            </div>
+        </div>
+    </section>
 
-        function showTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            if (tab === 'login') {
-                document.getElementById('loginForm').classList.remove('hidden');
-                document.getElementById('registerForm').classList.add('hidden');
-            } else {
-                document.getElementById('loginForm').classList.add('hidden');
-                document.getElementById('registerForm').classList.remove('hidden');
-            }
-            document.getElementById('message').innerHTML = '';
-        }
+    <section class="how-it-works" id="how-it-works">
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-subtitle">Get started in three simple steps.</p>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Create Your Profile</h3>
+                <p>Sign up and upload your resume. Our AI will analyze your skills and experience automatically.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Get Matched</h3>
+                <p>Receive personalized job recommendations powered by AI that match your unique qualifications.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Apply & Succeed</h3>
+                <p>Apply to jobs with one click and use our AI advisor to prepare for interviews and land your dream role.</p>
+            </div>
+        </div>
+    </section>
 
-        function selectUserType(type) {
-            document.querySelectorAll('.user-type-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            event.currentTarget.classList.add('selected');
-            document.getElementById('userType').value = type;
-        }
+    <section class="user-types" id="who">
+        <h2 class="section-title">Built for Everyone</h2>
+        <p class="section-subtitle">Whether you're looking for a job or looking to hire, JobAI has you covered.</p>
+        <div class="types-grid">
+            <div class="type-card">
+                <div class="type-icon">👤</div>
+                <h3>Job Seekers</h3>
+                <p>Find opportunities that match your skills and advance your career with AI-powered guidance.</p>
+                <ul>
+                    <li>AI resume analysis & skill extraction</li>
+                    <li>Personalized job recommendations</li>
+                    <li>AI career advisor chatbot</li>
+                    <li>Application tracking dashboard</li>
+                </ul>
+            </div>
+            <div class="type-card">
+                <div class="type-icon">💼</div>
+                <h3>Employers</h3>
+                <p>Post jobs and find the best candidates faster with AI-assisted hiring tools.</p>
+                <ul>
+                    <li>AI-assisted job posting creation</li>
+                    <li>Smart candidate matching</li>
+                    <li>Application management</li>
+                    <li>Payment & salary processing</li>
+                </ul>
+            </div>
+        </div>
+    </section>
 
-        function showMessage(message, type = 'error') {
-            const messageDiv = document.getElementById('message');
-            messageDiv.className = type;
-            messageDiv.textContent = message;
-        }
+    <section class="cta">
+        <h2>Ready to Transform Your Job Search?</h2>
+        <p>Join JobAI today and let artificial intelligence work for you.</p>
+        <a href="login.html#register" class="cta-btn">Get Started Free →</a>
+    </section>
 
-        async function handleLogin(event) {
-            event.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
+    <footer>
+        <p>&copy; 2025 JobAI. AI-Powered Job Recommendation System.</p>
+    </footer>
 
-            try {
-                const response = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    const userType = data.user.user_type;
-                    const redirectUrl = APPS[userType] || APPS.jobseeker;
-                    
-                    localStorage.setItem('token', data.token);
-                    
-                    showMessage('Login successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = `${redirectUrl}/dashboard?token=${data.token}`;
-                    }, 1000);
-                } else {
-                    showMessage(data.message || 'Login failed');
-                }
-            } catch (error) {
-                showMessage('Network error. Please try again.');
-            }
-        }
-
-        async function handleRegister(event) {
-            event.preventDefault();
-            const name = document.getElementById('registerName').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
-            const userType = document.getElementById('userType').value;
-
-            if (password !== passwordConfirm) {
-                showMessage('Passwords do not match');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name,
-                        email,
-                        password,
-                        password_confirmation: passwordConfirm,
-                        user_type: userType
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    const redirectUrl = APPS[userType] || APPS.jobseeker;
-                    
-                    localStorage.setItem('token', data.token);
-                    
-                    showMessage('Registration successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = `${redirectUrl}/dashboard?token=${data.token}`;
-                    }, 1000);
-                } else {
-                    const errorMsg = data.errors 
-                        ? Object.values(data.errors).flat().join(', ')
-                        : data.message || 'Registration failed';
-                    showMessage(errorMsg);
-                }
-            } catch (error) {
-                showMessage('Network error. Please try again.');
-            }
-        }
-    </script>
 </body>
 </html>

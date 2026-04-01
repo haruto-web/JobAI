@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobAI - Login / Register</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+
+        .back-link {
+            position: fixed; top: 20px; left: 20px;
+            color: rgba(255,255,255,0.8); text-decoration: none; font-size: 15px; font-weight: 500;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: #fff; }
+
+        .container {
+            background: white; border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px; width: 100%; padding: 40px;
+        }
+
+        h1 { color: #667eea; text-align: center; margin-bottom: 10px; font-size: 32px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 40px; font-size: 16px; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; }
+        .tab {
+            flex: 1; padding: 12px; border: none; background: #f0f0f0;
+            cursor: pointer; border-radius: 8px; font-size: 16px; font-weight: 600; transition: all 0.3s;
+        }
+        .tab.active { background: #667eea; color: white; }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        input, select {
+            width: 100%; padding: 12px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 14px; transition: border 0.3s;
+        }
+        input:focus, select:focus { outline: none; border-color: #667eea; }
+
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 8px;
+            font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-top: 10px;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+
+        .error { background: #fee; color: #c33; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .success { background: #efe; color: #3c3; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .hidden { display: none; }
+
+        .user-type-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .user-type-card {
+            padding: 20px; border: 2px solid #e0e0e0; border-radius: 8px;
+            cursor: pointer; text-align: center; transition: all 0.3s;
+        }
+        .user-type-card:hover { border-color: #667eea; transform: translateY(-2px); }
+        .user-type-card.selected { border-color: #667eea; background: #f0f4ff; }
+        .user-type-card h3 { color: #333; margin-bottom: 5px; font-size: 18px; }
+        .user-type-card p { color: #666; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-link">← Back to Home</a>
+
+    <div class="container">
+        <h1>🚀 JobAI</h1>
+        <p class="subtitle">AI-Powered Job Recommendation System</p>
+
+        <div class="tabs">
+            <button class="tab active" id="loginTab" onclick="showTab('login')">Login</button>
+            <button class="tab" id="registerTab" onclick="showTab('register')">Register</button>
+        </div>
+
+        <div id="message"></div>
+
+        <!-- Login Form -->
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" required placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="registerName" required placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="registerEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="registerPassword" required minlength="8" placeholder="Create a password (min 8 characters)">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="registerPasswordConfirm" required placeholder="Confirm your password">
+            </div>
+            <div class="form-group">
+                <label>I am a:</label>
+                <div class="user-type-cards">
+                    <div class="user-type-card selected" onclick="selectUserType('jobseeker')">
+                        <h3>👤 Job Seeker</h3>
+                        <p>Find your dream job</p>
+                    </div>
+                    <div class="user-type-card" onclick="selectUserType('employer')">
+                        <h3>💼 Employer</h3>
+                        <p>Post jobs & hire</p>
+                    </div>
+                </div>
+                <input type="hidden" id="userType" value="jobseeker">
+            </div>
+            <button type="submit" class="btn btn-primary">Create Account</button>
+        </form>
+    </div>
+
+    <script>
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_URL = isLocal ? 'http://localhost:8000/api' : 'https://jobai-production-ca98.up.railway.app/api';
+        const APPS = isLocal ? {
+            jobseeker: 'http://localhost:3001',
+            employer: 'http://localhost:3002',
+            admin: 'http://localhost:3003'
+        } : {
+            jobseeker: 'https://job-ai-blond.vercel.app',
+            employer: 'https://job-ai-blond.vercel.app',
+            admin: 'https://job-ai-blond.vercel.app'
+        };
+
+        // Auto-switch to register tab if URL has #register
+        if (window.location.hash === '#register') {
+            showTab('register');
+        }
+
+        function showTab(tab) {
+            document.getElementById('loginTab').classList.toggle('active', tab === 'login');
+            document.getElementById('registerTab').classList.toggle('active', tab === 'register');
+            document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+            document.getElementById('message').innerHTML = '';
+        }
+
+        function selectUserType(type) {
+            document.querySelectorAll('.user-type-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            document.getElementById('userType').value = type;
+        }
+
+        function showMessage(message, type = 'error') {
+            const el = document.getElementById('message');
+            el.className = type;
+            el.textContent = message;
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    const redirectUrl = APPS[data.user.user_type] || APPS.jobseeker;
+                    localStorage.setItem('token', data.token);
+                    showMessage('Login successful! Redirecting...', 'success');
+                    setTimeout(() => { window.location.href = `${redirectUrl}/dashboard?token=${data.token}`; }, 1000);
+                } else {
+                    showMessage(data.message || 'Login failed');
+                }
+            } catch (e) {
+                showMessage('Network error. Please try again.');
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            const userType = document.getElementById('userType').value;
+
+            if (password !== passwordConfirm) { showMessage('Passwords do not match'); return; }
+
+            try {
+                const res = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, password_confirmation: passwordConfirm, user_type: userType })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    const redirectUrl = APPS[userType] || APPS.jobseeker;
+                    localStorage.setItem('token', data.token);
+                    showMessage('Registration successful! Redirecting...', 'success');
+                    setTimeout(() => { window.location.href = `${redirectUrl}/dashboard?token=${data.token}`; }, 1000);
+                } else {
+                    const msg = data.errors ? Object.values(data.errors).flat().join(', ') : data.message || 'Registration failed';
+                    showMessage(msg);
+                }
+            } catch (e) {
+                showMessage('Network error. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>

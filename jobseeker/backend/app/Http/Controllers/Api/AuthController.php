@@ -42,11 +42,11 @@ class AuthController extends Controller
                 ]
             );
 
+            // TODO: Send token via email using Mail facade instead of returning in response
+            // Mail::to($validated['email'])->send(new PasswordReset($token));
+
             return response()->json([
-                'message' => 'Password reset token generated.',
-                'email' => $validated['email'],
-                'token' => $token,
-                'reset_url' => config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($validated['email'])
+                'message' => 'If an account exists with that email, a password reset link has been sent.',
             ]);
         } catch (\Exception $e) {
             Log::error('Password reset failed: ' . $e->getMessage());
@@ -107,12 +107,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('api-token')->plainTextToken;
 
-        // Determine redirect URL based on user type
-        $redirectUrl = match($user->user_type) {
-            'employer' => 'http://localhost:3002',
-            'admin' => 'http://localhost:3003',
-            default => 'http://localhost:3001' // jobseeker
-        };
+        $redirectUrl = $this->getRedirectUrl($user->user_type);
 
         return response()->json([
             'user' => $user->load('profile'),
@@ -131,25 +126,6 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Hardcoded admin login - create user if not exists
-        if ($request->input('email') === 'admin123@gmail.com' && $request->input('password') === 'admin12345') {
-            $user = User::firstOrCreate(
-                ['email' => 'admin123@gmail.com'],
-                [
-                    'name' => 'Admin User',
-                    'password' => Hash::make('admin12345'),
-                    'user_type' => 'admin',
-                ]
-            );
-            $token = $user->createToken('api-token')->plainTextToken;
-
-            return response()->json([
-                'user' => $user->load('profile'),
-                'token' => $token,
-                'redirect_url' => 'http://localhost:3003', // Admin always goes to 3003
-            ]);
-        }
-
         $user = User::where('email', $request->input('email'))->first();
 
         if (!$user || !Hash::check($request->input('password'), $user->password)) {
@@ -158,18 +134,22 @@ class AuthController extends Controller
 
         $token = $user->createToken('api-token')->plainTextToken;
 
-        // Determine redirect URL based on user type
-        $redirectUrl = match($user->user_type) {
-            'employer' => 'http://localhost:3002',
-            'admin' => 'http://localhost:3003',
-            default => 'http://localhost:3001' // jobseeker
-        };
+        $redirectUrl = $this->getRedirectUrl($user->user_type);
 
         return response()->json([
             'user' => $user->load('profile'),
             'token' => $token,
             'redirect_url' => $redirectUrl,
         ]);
+    }
+
+    private function getRedirectUrl(string $userType): string
+    {
+        return match($userType) {
+            'employer' => config('app.employer_frontend_url', 'http://localhost:3002'),
+            'admin' => config('app.admin_frontend_url', 'http://localhost:3003'),
+            default => config('app.frontend_url', 'http://localhost:3001'),
+        };
     }
 
     public function logout(Request $request)

@@ -6,13 +6,16 @@ use App\Http\Controllers\Api\{
 };
 use Illuminate\Support\Facades\Route;
 
-// ---------------- Public Routes ----------------
-Route::post('login', [AuthController::class, 'login']);
-Route::post('register', [AuthController::class, 'register']);
-Route::post('verify-email', [AuthController::class, 'verifyEmail']);
-Route::post('resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
-Route::post('send-password-reset', [AuthController::class, 'sendPasswordReset']);
-Route::post('reset-password', [AuthController::class, 'resetPassword']);
+// ---------------- Public Routes (rate limited) ----------------
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('register', [AuthController::class, 'register']);
+    Route::post('verify-email', [AuthController::class, 'verifyEmail']);
+    Route::post('resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
+    Route::post('send-password-reset', [AuthController::class, 'sendPasswordReset']);
+    Route::post('reset-password', [AuthController::class, 'resetPassword']);
+});
+
 Route::get('jobs', [JobController::class, 'index']);
 Route::get('jobs/search', [JobController::class, 'search']);
 Route::get('jobs/{id}', [JobController::class, 'show']);
@@ -71,8 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('payments', [PaymentController::class, 'store']);
     Route::post('manage-money', [PaymentController::class, 'manageMoney']);
 
-    // Admin routes
-    Route::prefix('admin')->group(function () {
+    // Admin routes (requires admin role)
+    Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('users', [AdminController::class, 'getUsers']);
         Route::put('users/{user}', [AdminController::class, 'updateUser']);
         Route::delete('users/{user}', [AdminController::class, 'deleteUser']);

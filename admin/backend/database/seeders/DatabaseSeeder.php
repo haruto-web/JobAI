@@ -268,10 +268,10 @@ class DatabaseSeeder extends Seeder
 
         // Create admin user
         User::updateOrCreate(
-            ['email' => 'venandrewmirasol@gmail.com'],
+            ['email' => env('ADMIN_EMAIL', 'admin@jobai.com')],
             [
                 'name' => 'Admin User',
-                'password' => Hash::make('admin12345'),
+                'password' => Hash::make(env('ADMIN_PASSWORD', 'ChangeMe!2025')),
                 'user_type' => 'admin',
             ]
         );
